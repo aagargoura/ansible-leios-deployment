@@ -1,6 +1,10 @@
 # Ansible Ouroboros Leios Deployment
 
-An automated, secure Infrastructure-as-Code (IaC) pipeline designed to provision, harden, and deploy an Ouroboros Leios node onto a remote VPS (such as IONOS) using Ansible and GitHub Actions.
+![Leios Prototype](https://img.shields.io/badge/Leios%20Prototype-2026w30-blue?style=flat-square&logo=cardano)
+![Ansible Version](https://img.shields.io/badge/Ansible-%3E%3D2.15-red?style=flat-square&logo=ansible)
+![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?style=flat-square&logo=docker&logoColor=white)
+
+An open-source, automated, secure Infrastructure-as-Code (IaC) pipeline designed to provision, harden, and deploy an Ouroboros Leios node onto a remote VPS (such as IONOS) using Ansible, Docker and GitHub Actions.
 
 > **Note:** This project is currently a work in progress (WIP).
 

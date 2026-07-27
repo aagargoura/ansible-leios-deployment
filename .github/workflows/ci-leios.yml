@@ -20,8 +20,8 @@ jobs:
       - name: Setup SSH Key for Ansible
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/leios_deploy_key
+          chmod 600 ~/.ssh/leios_deploy_key
           # Prevent SSH from asking for strict host key checking confirmation
           echo "StrictHostKeyChecking no" > ~/.ssh/config
 

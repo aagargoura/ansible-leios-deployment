@@ -1,3 +1,4 @@
+---
 - name: Hardening IONOS VPS for Leios Node
   hosts: nodes
   become: yes

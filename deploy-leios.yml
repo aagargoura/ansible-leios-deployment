@@ -4,14 +4,16 @@
   become: yes
   vars:
     # Update this variable when a new weekly release drops
-    leios_version: "prototype-2026w29"
-    working_dir: "/root/leios-testnet"
+    leios_version: "prototype-2026w30"
+    working_dir: "/home/deployer/leios-testnet"
 
   tasks:
     - name: Ensure working and config directories exist
       file:
         path: "{{ item }}"
         state: directory
+        owner: deployer
+        group: deployer
         mode: '0755'
       loop:
         - "{{ working_dir }}"
@@ -21,18 +23,24 @@
       get_url:
         url: https://raw.githubusercontent.com/input-output-hk/ouroboros-leios/main/testnet/pin-config.sh
         dest: "{{ working_dir }}/pin-config.sh"
+        owner: deployer
+        group: deployer
         mode: '0755'
 
     - name: Execute pin-config script to update topology and genesis files
       command: bash pin-config.sh
       args:
         chdir: "{{ working_dir }}"
+      become_user: deployer
 
     # UNCOMMENT THIS TASK ONLY WHEN A CHAIN RESET IS ANNOUNCED:
-    # - name: Wipe database directory for chain reset
+    # - name: Wipe database and logs directory for chain reset
     #   file:
-    #     path: "{{ working_dir }}/db"
+    #     path: "{{ item }}"
     #     state: absent
+    #   loop:
+    #     - "{{ working_dir }}/db"
+    #     - "{{ working_dir }}/node.log"
 
     - name: Run Leios Docker Container
       docker_container:

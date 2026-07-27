@@ -2,6 +2,17 @@
 
 An automated, secure Infrastructure-as-Code (IaC) pipeline designed to provision, harden, and deploy an Ouroboros Leios node onto a remote VPS (such as IONOS) using Ansible and GitHub Actions.
 
+> **Note:** This project is currently a work in progress (WIP).
+
+### My Node Specifications
+Tested and verified on the following hardware profile:
+* **CPU:** 6 vCores
+* **RAM:** 8 GB
+* **Storage:** 240 GB NVMe SSD
+* **OS:** Ubuntu 26.04 (or compatible Linux distributions with Docker & Ansible support)
+* **Location/Datacenter:**  Germany 🇩🇪
+
+
 ## Project Structure
 
 ```text

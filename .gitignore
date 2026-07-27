@@ -1,0 +1,3 @@
+vars.local.yml
+venv/
+.DS_Store

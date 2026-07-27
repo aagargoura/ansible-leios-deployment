@@ -1,0 +1,37 @@
+name: Deploy Leios Node via Ansible
+
+on:
+  push:
+    branches:
+      - main
+    # Only trigger the pipeline if the Ansible playbook actually changes
+    paths:
+      - 'deploy-leios.yml'
+  workflow_dispatch: # Allows manual triggering from the GitHub UI
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH Key for Ansible
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # Prevent SSH from asking for strict host key checking confirmation
+          echo "StrictHostKeyChecking no" > ~/.ssh/config
+
+      - name: Install Ansible on GitHub Runner
+        run: sudo apt-get update && sudo apt-get install -y ansible
+
+      - name: Execute Ansible Playbook
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: False
+        # Dynamically pass the secrets into the playbook execution
+        run: |
+          ansible-playbook -i inventory.ini deploy-leios.yml \
+            --extra-vars "ansible_host=${{ secrets.VPS_IP }} ansible_user=${{ secrets.VPS_USERNAME }}"

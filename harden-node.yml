@@ -1,0 +1,86 @@
+- name: Hardening IONOS VPS for Leios Node
+  hosts: nodes
+  become: yes
+  # This automatically loads local vars if present, or falls back to empty strings
+  vars_files:
+    - [ 'vars.local.yml', 'vars.empty.yml' ]
+
+  vars:
+    # It checks if local_ssh_public_key is defined (from vars.local.yml), 
+    # otherwise it pulls from the environment variable (for GitHub Actions)
+    your_public_ssh_key: "{{ local_ssh_public_key | default(lookup('env', 'SSH_PUBLIC_KEY')) }}"
+    leios_port: "3010"
+
+  tasks:
+    - name: Create dedicated 'deployer' user with sudo rights
+      user:
+        name: deployer
+        groups: sudo
+        append: yes
+        shell: /bin/bash
+
+    - name: Allow 'deployer' user passwordless sudo
+      lineinfile:
+        path: /etc/sudoers.d/deployer
+        line: 'deployer ALL=(ALL) NOPASSWD:ALL'
+        create: yes
+        validate: 'visudo -cf %s'
+
+    - name: Add public SSH key to 'deployer' user
+      authorized_key:
+        user: deployer
+        state: present
+        key: "{{ your_public_ssh_key }}"
+
+    - name: Install UFW and Fail2ban
+      apt:
+        name:
+          - ufw
+          - fail2ban
+        state: present
+        update_cache: yes
+
+    - name: Set UFW default policies
+      ufw:
+        default: "{{ item.policy }}"
+        direction: "{{ item.direction }}"
+      loop:
+        - { policy: 'deny', direction: 'incoming' }
+        - { policy: 'allow', direction: 'outgoing' }
+
+    - name: Allow SSH traffic
+      ufw:
+        rule: allow
+        port: "22"
+        proto: tcp
+
+    - name: Allow Leios P2P traffic
+      ufw:
+        rule: allow
+        port: "{{ leios_port }}"
+        proto: tcp
+
+    - name: Enable UFW Firewall
+      ufw:
+        state: enabled
+
+    - name: Configure Fail2ban for SSH
+      copy:
+        dest: /etc/fail2ban/jail.local
+        content: |
+          [DEFAULT]
+          bantime = 3600
+          findtime = 600
+          maxretry = 3
+
+          [sshd]
+          enabled = true
+          port = 22
+          mode = aggressive
+      notify: Restart Fail2ban
+
+  handlers:
+    - name: Restart Fail2ban
+      service:
+        name: fail2ban
+        state: restarted

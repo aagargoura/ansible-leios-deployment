@@ -1,0 +1,48 @@
+---
+- name: Deploy and Update Ouroboros Leios Node
+  hosts: nodes
+  become: yes
+  vars:
+    # Update this variable when a new weekly release drops
+    leios_version: "prototype-2026w29"
+    working_dir: "/root/leios-testnet"
+
+  tasks:
+    - name: Ensure working and config directories exist
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ working_dir }}"
+        - "{{ working_dir }}/config"
+
+    - name: Download latest Musashi pin-config script
+      get_url:
+        url: https://raw.githubusercontent.com/input-output-hk/ouroboros-leios/main/testnet/pin-config.sh
+        dest: "{{ working_dir }}/pin-config.sh"
+        mode: '0755'
+
+    - name: Execute pin-config script to update topology and genesis files
+      command: bash pin-config.sh
+      args:
+        chdir: "{{ working_dir }}"
+
+    # UNCOMMENT THIS TASK ONLY WHEN A CHAIN RESET IS ANNOUNCED:
+    # - name: Wipe database directory for chain reset
+    #   file:
+    #     path: "{{ working_dir }}/db"
+    #     state: absent
+
+    - name: Run Leios Docker Container
+      docker_container:
+        name: leios-relay
+        image: "ghcr.io/input-output-hk/ouroboros-leios/cardano-node-testnet:{{ leios_version }}"
+        state: started
+        restart_policy: unless-stopped
+        pull: yes
+        published_ports:
+          - "3010:3010"
+        volumes:
+          - "{{ working_dir }}:/data"
+          - "{{ working_dir }}/config:/app/config:ro"

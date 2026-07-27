@@ -2,8 +2,6 @@
 
 An automated, secure Infrastructure-as-Code (IaC) pipeline designed to provision, harden, and deploy an Ouroboros Leios node onto a remote VPS (such as IONOS) using Ansible and GitHub Actions.
 
----
-
 ## Project Structure
 
 ```text
@@ -61,8 +59,6 @@ Downloads configuration scripts, updates topology files, and spins up the Leios 
 ansible-playbook -i inventory.ini deploy-leios.yml --private-key ~/.ssh/leios_deploy_key --user deployer
 ```
 
----
-
 ## CI/CD Automation
 
 The pipeline is automated via GitHub Actions (`.github/workflows/ci-leios.yml`). Ensure the following repository secrets are configured in your GitHub settings:
@@ -72,7 +68,7 @@ The pipeline is automated via GitHub Actions (`.github/workflows/ci-leios.yml`).
 * `SSH_PUBLIC_KEY`
 
 ## Verifying Node Status
-Once your deployment finishes running, you can SSH into your remote server to check the health and synchronization status of your running node container.
+Once your deployment finishes running, you can SSH into your remote server to check the health, version information, and synchronization status of your running node container.
 
 ### 1. SSH into your VPS
 ```bash
@@ -85,7 +81,15 @@ Verify that your container is actively running:
 docker ps
 ```
 
-### 3. Query Node Tip:
+### 3.Check Component Versions:
+Inspect the versions of cardano-cli, cardano-node, or other components running inside the container:
+
+```bash
+docker exec -it leios-relay cardano-node --version
+docker exec -it leios-relay cardano-cli --version
+```
+
+### 4. Query Node Tip:
 To check the current synchronization slot, block, and epoch information via cardano-cli inside your running container, run:
 
 ```bash

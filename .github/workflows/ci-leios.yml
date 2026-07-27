@@ -27,6 +27,10 @@ jobs:
 
       - name: Install Ansible on GitHub Runner
         run: sudo apt-get update && sudo apt-get install -y ansible
+      
+      - name: Check Playbook Syntax
+        run: |
+          ansible-playbook -i inventory.ini deploy-leios.yml --syntax-check
 
       - name: Execute Ansible Playbook
         env:
@@ -34,4 +38,5 @@ jobs:
         # Dynamically pass the secrets into the playbook execution
         run: |
           ansible-playbook -i inventory.ini deploy-leios.yml \
+            --private-key ~/.ssh/leios_deploy_key \
             --extra-vars "ansible_host=${{ secrets.VPS_IP }} ansible_user=${{ secrets.VPS_USERNAME }}"

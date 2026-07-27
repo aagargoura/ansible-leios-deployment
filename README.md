@@ -70,3 +70,26 @@ The pipeline is automated via GitHub Actions (`.github/workflows/ci-leios.yml`).
 * `VPS_USERNAME`
 * `VPS_SSH_KEY`
 * `SSH_PUBLIC_KEY`
+
+## Verifying Node Status
+Once your deployment finishes running, you can SSH into your remote server to check the health and synchronization status of your running node container.
+
+### 1. SSH into your VPS
+```bash
+ssh deployer@YOUR_VPS_IP
+```
+
+### 2. Check Container Status
+Verify that your container is actively running:
+```bash
+docker ps
+```
+
+### 3. Query Node Tip:
+To check the current synchronization slot, block, and epoch information via cardano-cli inside your running container, run:
+
+```bash
+docker exec -it leios-relay cardano-cli query tip --testnet-magic 164 --socket-path node.socket
+```
+
+> **Note:** Replace `leios-relay` with your specific container name if it differs

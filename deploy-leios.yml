@@ -49,6 +49,15 @@
     #     - "{{ working_dir }}/db"
     #     - "{{ working_dir }}/node.log"
 
+    - name: Ensure python3-pip and dependencies are installed via apt
+      apt:
+        name:
+          - python3-pip
+          - python3-docker
+        state: present
+        update_cache: yes
+      become: yes
+
     - name: Run Leios Docker Container
       docker_container:
         name: leios-relay
@@ -58,7 +67,7 @@
         pull: yes
         published_ports:
           - "3010:3010"
-          - "127.0.0.1:12798:12798" # Expose the Prometheus metrics port to be only reachable locally from inside the host
+          - "12798:12798" # Bind to host interfaces so containers can bridge to it via host-gateway
         volumes:
           - "{{ working_dir }}:/data"
           - "{{ working_dir }}/config:/app/config:ro"

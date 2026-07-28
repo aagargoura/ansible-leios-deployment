@@ -1,6 +1,8 @@
 # Ansible Ouroboros-Leios Node Deployment
 
 ![Leios Prototype](https://img.shields.io/badge/Leios%20Prototype-2026w30-blue?style=flat-square&logo=cardano)
+![Prometheus](https://img.shields.io/badge/Prometheus-F05032?style=flat-square&logo=prometheus&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-F46800?style=flat-square&logo=grafana&logoColor=white)
 ![Ansible Version](https://img.shields.io/badge/Ansible-%3E%3D2.15-red?style=flat-square&logo=ansible)
 ![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?style=flat-square&logo=docker&logoColor=white)
 
@@ -28,6 +30,7 @@ ansible-leios-deployment/
 ├── harden-node.yml               # OS security hardening & user provisioning playbook
 ├── install-docker.yml            # Docker engine and container runtime installation playbook
 ├── deploy-leios.yml              # Application deployment and container orchestration playbook
+├── deploy-monitoring.yml         # Local observability stack (Prometheus & Grafana) playbook
 ├── vars.empty.yml                # Fallback empty variables template for CI/CD runs
 ├── vars.local.yml                # Local override variables (Git-ignored for security)
 └── README.md
@@ -37,10 +40,22 @@ ansible-leios-deployment/
 
 * **Local Machine:** Ansible installed (via `pipx` or a Python virtual environment).
 * **SSH Key Pair:** A dedicated SSH key pair (e.g., `leios_deploy_key`) generated for secure communication.
-* **Remote VPS:** A clean Ubuntu/Debian server instance.
+* **Remote VPS:** A clean Ubuntu/Debian server instance from a cloud provider.
 
-## Local Configuration
+## Quick Start / Deployment
 
+### 1. Clone the repository:
+```bash
+git clone [https://github.com/aagargoura/ansible-leios-deployment.git](https://github.com/aagargoura/ansible-leios-deployment.git)
+cd ansible-leios-deployment
+```
+
+### 2. Configure your inventory:
+Update `inventory.ini` with your target server IP address and connection details.
+
+To avoid hardcoding long command-line flags (like `--private-key` and `--user`) every time, bake those settings directly into your `inventory.ini` or use an SSH configuration alias (`~/.ssh/config`).
+
+### 3. Local Configuration:
 To test and run playbooks locally without exposing credentials or IP addresses in your public repository:
 
 1. **Create your local variables file (`vars.local.yml`)**:
@@ -52,23 +67,22 @@ To test and run playbooks locally without exposing credentials or IP addresses i
 
 2. **Ensure local secrets are ignored** by verifying that `vars.local.yml` and your `venv/` are included in your `.gitignore`.
 
-## Execution Guide
-
+### 4. Run the deployment playbooks:
 Run the modular playbooks sequentially from your local terminal:
 
-### 1. Server Hardening
+1. **Server Hardening**
 Provisions the secure `deployer` user, configures SSH keys, and sets up sudoers permissions:
 ```bash
 ansible-playbook -i inventory.ini harden-node.yml --private-key ~/.ssh/leios_deploy_key --user root
 ```
 
-### 2. Docker Installation
+2. **Docker Installation**
 Installs Docker Engine, container plugins, and adds the `deployer` user to the `docker` group:
 ```bash
 ansible-playbook -i inventory.ini install-docker.yml --private-key ~/.ssh/leios_deploy_key --user root
 ```
 
-### 3. Application Deployment
+3. **Application Deployment**
 Downloads configuration scripts, updates topology files, and spins up the Leios Docker container as the non-root `deployer` user:
 ```bash
 ansible-playbook -i inventory.ini deploy-leios.yml --private-key ~/.ssh/leios_deploy_key --user deployer
@@ -114,7 +128,7 @@ docker exec -it leios-relay cardano-cli query tip --testnet-magic 164 --socket-p
 > **Note:** Replace `leios-relay` with your specific container name if it differs
 
 ## Monitoring & Telemetry
-The container exposes Prometheus metrics securely on 127.0.0.1:12798, mapped locally for internal Prometheus and Grafana stack consumption without public internet exposure.
+The container exposes Prometheus metrics securely on `127.0.0.1:12798`, mapped locally for internal Prometheus and Grafana stack consumption without public internet exposure.
 
 **Test the local metrics endpoint:**
 SSH into your VPS and run these quick check to confirm it worked:
@@ -123,3 +137,16 @@ curl -I http://127.0.0.1:12798/metrics
 ```
 
 You should receive an `HTTP/1.1 200 OK` response
+
+ --- 
+
+As the container securely exposes Prometheus metrics internally on `127.0.0.1:12798`. You can deploy an automated local monitoring stack (Prometheus and Grafana) using the included observability playbook:
+```bash
+ansible-playbook -i inventory.ini deploy-monitoring.yml --private-key ~/.ssh/leios_deploy_key --user deployer
+```
+
+To view your dashboards locally without exposing ports to the public internet, use secure SSH local port forwarding:
+
+- **Grafana Dashboard:** `ssh -L 3000:127.0.0.1:3000 deployer@YOUR_VPS_IP` (Navigate to `http://localhost:3000`)
+
+- **Prometheus UI:** `ssh -L 9090:127.0.0.1:9090 deployer@YOUR_VPS_IP` (Navigate to `http://localhost:9090`)

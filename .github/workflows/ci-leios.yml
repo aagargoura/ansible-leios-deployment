@@ -7,6 +7,8 @@ on:
     # Only trigger the pipeline if the Ansible playbook actually changes
     paths:
       - 'deploy-leios.yml'
+      - 'deploy-monitoring.yml'
+      - 'requirements.yml'
   workflow_dispatch: # Allows manual triggering from the GitHub UI
 
 jobs:
@@ -25,18 +27,27 @@ jobs:
           # Prevent SSH from asking for strict host key checking confirmation
           echo "StrictHostKeyChecking no" > ~/.ssh/config
 
-      - name: Install Ansible on GitHub Runner
-        run: sudo apt-get update && sudo apt-get install -y ansible
+      - name: Install Ansible and Dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y ansible
+          ansible-galaxy collection install -r requirements.yml
       
       - name: Check Playbook Syntax
         run: |
           ansible-playbook -i inventory.ini deploy-leios.yml --syntax-check
+          ansible-playbook -i inventory.ini deploy-monitoring.yml --syntax-check
 
-      - name: Execute Ansible Playbook
+      - name: Execute Ansible Playbooks
         env:
           ANSIBLE_HOST_KEY_CHECKING: False
         # Dynamically pass the secrets into the playbook execution
         run: |
+          # Deploy Node Infrastructure
           ansible-playbook -i inventory.ini deploy-leios.yml \
+            --private-key ~/.ssh/leios_deploy_key \
+            --extra-vars "ansible_host=${{ secrets.VPS_IP }} ansible_user=${{ secrets.VPS_USERNAME }}"
+
+          # 2. Deploy Monitoring Stack (Prometheus & Grafana)
+          ansible-playbook -i inventory.ini deploy-monitoring.yml \
             --private-key ~/.ssh/leios_deploy_key \
             --extra-vars "ansible_host=${{ secrets.VPS_IP }} ansible_user=${{ secrets.VPS_USERNAME }}"

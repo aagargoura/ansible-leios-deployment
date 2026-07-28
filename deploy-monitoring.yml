@@ -1,0 +1,75 @@
+---
+- name: Deploy Local Monitoring Stack (Prometheus & Grafana)
+  hosts: nodes
+  become: yes
+  vars:
+    monitoring_dir: "/home/deployer/monitoring"
+
+  tasks:
+    - name: Ensure monitoring directory exists
+      file:
+        path: "{{ monitoring_dir }}"
+        state: directory
+        owner: deployer
+        group: deployer
+        mode: '0755'
+
+    - name: Copy Prometheus configuration
+      copy:
+        dest: "{{ monitoring_dir }}/prometheus.yml"
+        owner: deployer
+        group: deployer
+        content: |
+          global:
+            scrape_interval: 15s
+
+          scrape_configs:
+            - job_name: 'leios-relay'
+              static_configs:
+                - targets: ['host.docker.internal:12798']
+      become_user: deployer
+
+    - name: Copy Docker Compose configuration for monitoring
+      copy:
+        dest: "{{ monitoring_dir }}/docker-compose.yml"
+        owner: deployer
+        group: deployer
+        content: |
+          services:
+            prometheus:
+              image: prom/prometheus:latest
+              container_name: prometheus
+              restart: unless-stopped
+              extra_hosts:
+                - "host.docker.internal:host-gateway"
+              ports:
+                - "127.0.0.1:9090:9090"
+              volumes:
+                - "./prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+                - "prometheus_data:/prometheus"
+              command:
+                - '--config.file=/etc/prometheus/prometheus.yml'
+                - '--storage.tsdb.path=/prometheus'
+
+            grafana:
+              image: grafana/grafana:latest
+              container_name: grafana
+              restart: unless-stopped
+              ports:
+                - "127.0.0.1:3000:3000"
+              volumes:
+                - "grafana_data:/var/lib/grafana"
+              environment:
+                - GF_SECURITY_ADMIN_USER=admin
+                - GF_SECURITY_ADMIN_PASSWORD=securepassword123
+
+          volumes:
+            prometheus_data:
+            grafana_data:
+      become_user: deployer
+
+    - name: Deploy Prometheus and Grafana via Docker Compose
+      community.docker.docker_compose_v2:
+        project_src: "{{ monitoring_dir }}"
+        state: present
+      become_user: deployer

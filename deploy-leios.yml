@@ -58,16 +58,15 @@
         update_cache: yes
       become: yes
 
-    - name: Run Leios Docker Container
-      docker_container:
-        name: leios-relay
-        image: "ghcr.io/input-output-hk/ouroboros-leios/cardano-node-testnet:{{ leios_version }}"
-        state: started
-        restart_policy: unless-stopped
-        pull: yes
-        published_ports:
-          - "3010:3010"
-          - "12798:12798" # Bind to host interfaces so containers can bridge to it via host-gateway
-        volumes:
-          - "{{ working_dir }}:/data"
-          - "{{ working_dir }}/config:/app/config:ro"
+    - name: Run Leios Docker Container via shell
+      shell: |
+        docker rm -f leios-relay || true
+        docker run -d \
+          --name leios-relay \
+          --restart unless-stopped \
+          -p 3010:3010 \
+          -p 12798:12798 \
+          -v "{{ working_dir }}:/data" \
+          -v "{{ working_dir }}/config:/app/config:ro" \
+          "ghcr.io/input-output-hk/ouroboros-leios/cardano-node-testnet:{{ leios_version }}"
+      become_user: deployer

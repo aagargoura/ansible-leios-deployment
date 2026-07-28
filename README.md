@@ -46,7 +46,7 @@ ansible-leios-deployment/
 
 ### 1. Clone the repository:
 ```bash
-git clone [https://github.com/aagargoura/ansible-leios-deployment.git](https://github.com/aagargoura/ansible-leios-deployment.git)
+git clone git@github.com:aagargoura/ansible-leios-deployment.git
 cd ansible-leios-deployment
 ```
 

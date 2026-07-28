@@ -85,18 +85,18 @@ The pipeline is automated via GitHub Actions (`.github/workflows/ci-leios.yml`).
 ## Verifying Node Status
 Once your deployment finishes running, you can SSH into your remote server to check the health, version information, and synchronization status of your running node container.
 
-### 1. SSH into your VPS
+1. **SSH into your VPS**
 ```bash
 ssh deployer@YOUR_VPS_IP
 ```
 
-### 2. Check Container Status
+2. **Check Container Status**
 Verify that your container is actively running:
 ```bash
 docker ps
 ```
 
-### 3.Check Component Versions:
+3. **Check Component Versions:**
 Inspect the versions of cardano-cli, cardano-node, or other components running inside the container:
 
 ```bash
@@ -104,7 +104,7 @@ docker exec -it leios-relay cardano-node --version
 docker exec -it leios-relay cardano-cli --version
 ```
 
-### 4. Query Node Tip:
+4. **Query Node Tip:**
 To check the current synchronization slot, block, and epoch information via cardano-cli inside your running container, run:
 
 ```bash
@@ -115,3 +115,11 @@ docker exec -it leios-relay cardano-cli query tip --testnet-magic 164 --socket-p
 
 ## Monitoring & Telemetry
 The container exposes Prometheus metrics securely on 127.0.0.1:12798, mapped locally for internal Prometheus and Grafana stack consumption without public internet exposure.
+
+**Test the local metrics endpoint:**
+SSH into your VPS and run these quick check to confirm it worked:
+```bash
+curl -I http://127.0.0.1:12798/metrics
+```
+
+You should receive an `HTTP/1.1 200 OK` response

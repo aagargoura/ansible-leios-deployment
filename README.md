@@ -1,4 +1,4 @@
-# Ansible Ouroboros Leios Deployment
+# Ansible Ouroboros-Leios Node Deployment
 
 ![Leios Prototype](https://img.shields.io/badge/Leios%20Prototype-2026w30-blue?style=flat-square&logo=cardano)
 ![Ansible Version](https://img.shields.io/badge/Ansible-%3E%3D2.15-red?style=flat-square&logo=ansible)
@@ -112,3 +112,6 @@ docker exec -it leios-relay cardano-cli query tip --testnet-magic 164 --socket-p
 ```
 
 > **Note:** Replace `leios-relay` with your specific container name if it differs
+
+## Monitoring & Telemetry
+The container exposes Prometheus metrics securely on 127.0.0.1:12798, mapped locally for internal Prometheus and Grafana stack consumption without public internet exposure.

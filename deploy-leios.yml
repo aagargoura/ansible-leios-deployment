@@ -32,6 +32,13 @@
       args:
         chdir: "{{ working_dir }}"
       become_user: deployer
+    
+    - name: Patch Prometheus bind address to allow container metrics scraping
+      replace:
+        path: "{{ working_dir }}/config/config.json"
+        regexp: 'PrometheusSimple suffix 127\.0\.0\.1 12798'
+        replace: 'PrometheusSimple suffix 0.0.0.0 12798'
+      become_user: deployer
 
     # UNCOMMENT THIS TASK ONLY WHEN A CHAIN RESET IS ANNOUNCED:
     # - name: Wipe database and logs directory for chain reset
@@ -51,6 +58,7 @@
         pull: yes
         published_ports:
           - "3010:3010"
+          - "127.0.0.1:12798:12798" # Expose the Prometheus metrics port to be only reachable locally from inside the host
         volumes:
           - "{{ working_dir }}:/data"
           - "{{ working_dir }}/config:/app/config:ro"

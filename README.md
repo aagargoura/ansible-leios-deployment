@@ -28,12 +28,14 @@ ansible-leios-deployment/
 │       ├── ci-leios.yml          # GitHub Actions CI/CD pipeline deployment
 │       └── ci-test.yml           # GitHub Actions CI/CD pipeline tests
 ├── inventory.ini                 # Target server inventory configuration
+├── group_vars/
+│   ├── nodes.yml                 # Your actual secrets (Git-ignored)
+│   └── nodes.yml.example         # Template committed to git
 ├── harden-node.yml               # OS security hardening & user provisioning playbook
 ├── install-docker.yml            # Docker engine and container runtime installation playbook
 ├── deploy-leios.yml              # Application deployment and container orchestration playbook
 ├── deploy-monitoring.yml         # Local observability stack (Prometheus & Grafana) playbook
 ├── vars.empty.yml                # Fallback empty variables template for CI/CD runs
-├── vars.local.yml                # Local override variables (Git-ignored for security)
 ├── .yamllint                     # Custom configuration for YAML linting rules
 └── README.md
 ```
@@ -60,15 +62,14 @@ To avoid hardcoding long command-line flags (like `--private-key` and `--user`) 
 ### 3. Local Configuration:
 To test and run playbooks locally without exposing credentials or IP addresses in your public repository:
 
-1. **Create your local variables file (`vars.local.yml`)**:
-   ```yaml
-   local_vps_ip: "YOUR_VPS_IP"
-   local_leios_port: "YOUR_LEIOS_PORT"
-   local_vps_username: "root"
-   local_ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG..."
+1. **Set Up Your Local Variables**:
+Navigate to the `group_vars/` directory and copy the template file to create your active configuration:
+   ```bash
+   cd group_vars
+   cp nodes.yml.example nodes.yml
    ```
 
-2. **Ensure local secrets are ignored** by verifying that `vars.local.yml` and your `venv/` are included in your `.gitignore`.
+2. **Ensure local secrets are ignored** by verifying that `group_vars/nodes.yml` and your `venv/` are included in your `.gitignore`.
 
 ### 4. Run the deployment playbooks:
 Run the modular playbooks sequentially from your local terminal:

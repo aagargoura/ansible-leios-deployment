@@ -1,7 +1,9 @@
 vars.local.yml
 .venv/
 .secrets
-.env/
+.env
+group_vars/nodes.yml
+group_vars/all.yml
 .ansible/
 .cache/
 .DS_Store

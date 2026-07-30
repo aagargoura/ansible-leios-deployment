@@ -1,0 +1,5 @@
+# Copy this file to nodes.yml and fill in your actual values
+local_vps_ip: "YOUR_SERVER_IP_HERE"
+local_leios_port: "YOUR_NODE_PORT_HERE"
+local_vps_username: "YOUR_USER_NAME_HERE"
+local_ssh_public_key: "YOUR_PUBLIC_KEY_HERE"

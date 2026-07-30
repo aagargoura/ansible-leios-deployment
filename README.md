@@ -25,7 +25,8 @@ Tested and verified on the following hardware profile:
 ansible-leios-deployment/
 ├── .github/
 │   └── workflows/
-│       └── ci-leios.yml          # GitHub Actions CI/CD pipeline
+│       ├── ci-leios.yml          # GitHub Actions CI/CD pipeline deployment
+│       └── ci-test.yml           # GitHub Actions CI/CD pipeline tests
 ├── inventory.ini                 # Target server inventory configuration
 ├── harden-node.yml               # OS security hardening & user provisioning playbook
 ├── install-docker.yml            # Docker engine and container runtime installation playbook
@@ -96,6 +97,43 @@ The pipeline is automated via GitHub Actions (`.github/workflows/ci-leios.yml`).
 * `VPS_SSH_KEY`
 * `SSH_PUBLIC_KEY`
 
+## Local Testing & CI Simulation
+
+To ensure your local tests match the GitHub Actions CI pipeline, it is recommended to run the linters inside an isolated **Python 3.10** virtual environment.
+
+**1. Create the Virtual Environment**
+Ensure you have Python 3.10 installed on your system, then create a new virtual environment in the root of the repository:
+
+```bash
+python3.10 -m venv .venv
+```
+**2. Activate the Environment**
+```bash
+source .venv/bin/activate
+```
+**3. Install Testing Dependencies**
+Install the exact linters and Ansible core used by the CI pipeline:
+```bash
+pip install --upgrade pip
+pip install ansible ansible-lint yamllint
+```
+
+**4. Run Local Tests**
+You can now run the same checks executed by the '.github/workflows/ci-test.yml' workflow:
+```bash
+# Check YAML formatting
+yamllint .
+
+# Verify Ansible syntax
+ansible-playbook -i inventory.ini deploy-leios.yml --syntax-check
+ansible-playbook -i inventory.ini deploy-monitoring.yml --syntax-check
+ansible-playbook -i inventory.ini harden-node.yml --syntax-check
+ansible-playbook -i inventory.ini install-docker.yml --syntax-check
+
+# Run the Ansible Linter
+ansible-lint deploy-leios.yml deploy-monitoring.yml install-docker.yml harden-node.yml
+```
+
 ## Verifying Node Status
 Once your deployment finishes running, you can SSH into your remote server to check the health, version information, and synchronization status of your running node container.
 
@@ -150,3 +188,21 @@ To view your dashboards locally without exposing ports to the public internet, u
 - **Grafana Dashboard:** `ssh -L 3000:127.0.0.1:3000 deployer@YOUR_VPS_IP` (Navigate to `http://localhost:3000`)
 
 - **Prometheus UI:** `ssh -L 9090:127.0.0.1:9090 deployer@YOUR_VPS_IP` (Navigate to `http://localhost:9090`)
+
+## Contributing
+
+Contributions, issues, and feature requests are welcome!
+
+This repository enforces a Decoupled CI Pipeline for open-source contributions:
+
+1. Fork the project and create your feature branch.
+
+2. Open a Pull Request against main.
+
+3. Our `ci-test.yml` workflow will automatically run linting and syntax checks on your code without accessing production secrets.
+
+4. Once tests pass and code is reviewed, it will be merged and deployed.
+
+## License
+
+Distributed under the Apache 2.0 License. See `LICENSE` for more information.

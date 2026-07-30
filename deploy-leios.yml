@@ -1,7 +1,8 @@
 ---
 - name: Deploy and Update Ouroboros Leios Node
   hosts: nodes
-  become: yes
+  remote_user: deployer
+  become: true
   vars:
     # Update this variable when a new weekly release drops
     leios_version: "prototype-2026w30"
@@ -9,7 +10,7 @@
 
   tasks:
     - name: Ensure working and config directories exist
-      file:
+      ansible.builtin.file:
         path: "{{ item }}"
         state: directory
         owner: deployer
@@ -20,7 +21,7 @@
         - "{{ working_dir }}/config"
 
     - name: Download latest Musashi pin-config script
-      get_url:
+      ansible.builtin.get_url:
         url: https://raw.githubusercontent.com/input-output-hk/ouroboros-leios/main/testnet/pin-config.sh
         dest: "{{ working_dir }}/pin-config.sh"
         owner: deployer
@@ -28,21 +29,24 @@
         mode: '0755'
 
     - name: Execute pin-config script to update topology and genesis files
-      command: bash pin-config.sh
+      ansible.builtin.command: bash pin-config.sh
       args:
         chdir: "{{ working_dir }}"
+      become: true
       become_user: deployer
-    
+      changed_when: true
+
     - name: Patch Prometheus bind address to allow container metrics scraping
-      replace:
+      ansible.builtin.replace:
         path: "{{ working_dir }}/config/config.json"
         regexp: 'PrometheusSimple suffix 127\.0\.0\.1 12798'
         replace: 'PrometheusSimple suffix 0.0.0.0 12798'
+      become: true
       become_user: deployer
 
     # UNCOMMENT THIS TASK ONLY WHEN A CHAIN RESET IS ANNOUNCED:
     # - name: Wipe database and logs directory for chain reset
-    #   file:
+    #   ansible.builtin.file:
     #     path: "{{ item }}"
     #     state: absent
     #   loop:
@@ -50,16 +54,16 @@
     #     - "{{ working_dir }}/node.log"
 
     - name: Ensure python3-pip and dependencies are installed via apt
-      apt:
+      ansible.builtin.apt:
         name:
           - python3-pip
           - python3-docker
         state: present
-        update_cache: yes
-      become: yes
+        update_cache: true
+      become: true
 
     - name: Run Leios Docker Container via shell
-      shell: |
+      ansible.builtin.shell: |
         docker rm -f leios-relay || true
         docker run -d \
           --name leios-relay \
@@ -69,4 +73,6 @@
           -v "{{ working_dir }}:/data" \
           -v "{{ working_dir }}/config:/app/config:ro" \
           "ghcr.io/input-output-hk/ouroboros-leios/cardano-node-testnet:{{ leios_version }}"
+      become: true
       become_user: deployer
+      changed_when: true

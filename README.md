@@ -34,6 +34,7 @@ ansible-leios-deployment/
 ├── deploy-monitoring.yml         # Local observability stack (Prometheus & Grafana) playbook
 ├── vars.empty.yml                # Fallback empty variables template for CI/CD runs
 ├── vars.local.yml                # Local override variables (Git-ignored for security)
+├── .yamllint                     # Custom configuration for YAML linting rules
 └── README.md
 ```
 
@@ -62,6 +63,7 @@ To test and run playbooks locally without exposing credentials or IP addresses i
 1. **Create your local variables file (`vars.local.yml`)**:
    ```yaml
    local_vps_ip: "YOUR_VPS_IP"
+   local_leios_port: "YOUR_LEIOS_PORT"
    local_vps_username: "root"
    local_ssh_public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG..."
    ```
@@ -95,6 +97,7 @@ The pipeline is automated via GitHub Actions (`.github/workflows/ci-leios.yml`).
 * `VPS_IP`
 * `VPS_USERNAME`
 * `VPS_SSH_KEY`
+* `LEIOS_PORT`
 * `SSH_PUBLIC_KEY`
 
 ## Local Testing & CI Simulation
@@ -169,7 +172,7 @@ docker exec -it leios-relay cardano-cli query tip --testnet-magic 164 --socket-p
 The container exposes Prometheus metrics securely on `127.0.0.1:12798`, mapped locally for internal Prometheus and Grafana stack consumption without public internet exposure.
 
 **Test the local metrics endpoint:**
-SSH into your VPS and run these quick check to confirm it worked:
+SSH into your VPS and run this quick check to confirm it worked:
 ```bash
 curl -I http://127.0.0.1:12798/metrics
 ```

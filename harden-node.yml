@@ -1,48 +1,51 @@
 ---
 - name: Hardening IONOS VPS for Leios Node
   hosts: nodes
-  become: yes
+  remote_user: root
+  become: true
   # This automatically loads local vars if present, or falls back to empty strings
   vars_files:
-    - [ 'vars.local.yml', 'vars.empty.yml' ]
+    - ['vars.local.yml', 'vars.empty.yml']
 
   vars:
-    # It checks if local_ssh_public_key is defined (from vars.local.yml), 
+    # It checks if local_ssh_public_key is defined (from vars.local.yml),
     # otherwise it pulls from the environment variable (for GitHub Actions)
-    your_public_ssh_key: "{{ local_ssh_public_key | default(lookup('env', 'SSH_PUBLIC_KEY')) }}"
-    leios_port: "3010"
+    public_ssh_key: "{{ local_ssh_public_key | default(lookup('env', 'SSH_PUBLIC_KEY')) }}"
+    # Checks vars.local.yml first, then GitHub Actions env, and defaults to "3010" if both are empty
+    leios_port: "{{ local_leios_port | default(lookup('env', 'LEIOS_PORT')) | default('3010', true) }}"
 
   tasks:
     - name: Create dedicated 'deployer' user with sudo rights
-      user:
+      ansible.builtin.user:
         name: deployer
         groups: sudo
-        append: yes
+        append: true
         shell: /bin/bash
 
     - name: Allow 'deployer' user passwordless sudo
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /etc/sudoers.d/deployer
         line: 'deployer ALL=(ALL) NOPASSWD:ALL'
-        create: yes
+        create: true
         validate: 'visudo -cf %s'
+        mode: '0440'
 
     - name: Add public SSH key to 'deployer' user
-      authorized_key:
+      ansible.posix.authorized_key:
         user: deployer
         state: present
-        key: "{{ your_public_ssh_key }}"
+        key: "{{ public_ssh_key }}"
 
     - name: Install UFW and Fail2ban
-      apt:
+      ansible.builtin.apt:
         name:
           - ufw
           - fail2ban
         state: present
-        update_cache: yes
+        update_cache: true
 
     - name: Set UFW default policies
-      ufw:
+      community.general.ufw:
         default: "{{ item.policy }}"
         direction: "{{ item.direction }}"
       loop:
@@ -50,24 +53,25 @@
         - { policy: 'allow', direction: 'outgoing' }
 
     - name: Allow SSH traffic
-      ufw:
+      community.general.ufw:
         rule: allow
         port: "22"
         proto: tcp
 
     - name: Allow Leios P2P traffic
-      ufw:
+      community.general.ufw:
         rule: allow
         port: "{{ leios_port }}"
         proto: tcp
 
     - name: Enable UFW Firewall
-      ufw:
+      community.general.ufw:
         state: enabled
 
     - name: Configure Fail2ban for SSH
-      copy:
+      ansible.builtin.copy:
         dest: /etc/fail2ban/jail.local
+        mode: '0644'
         content: |
           [DEFAULT]
           bantime = 3600
@@ -82,6 +86,6 @@
 
   handlers:
     - name: Restart Fail2ban
-      service:
+      ansible.builtin.service:
         name: fail2ban
         state: restarted

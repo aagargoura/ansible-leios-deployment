@@ -7,7 +7,13 @@ ignore: |
   .ansible/
 
 rules:
-  # Disable the 80-character limit, as Ansible often requires long lines
   line-length: disable
-  # Don't require '---' at the top of every single file
   document-start: disable
+  comments:
+    min-spaces-from-content: 1
+  comments-indentation: disable
+  braces:
+    max-spaces-inside: 1
+  octal-values:
+    forbid-implicit-octal: true
+    forbid-explicit-octal: true

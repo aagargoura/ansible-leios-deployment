@@ -1,13 +1,14 @@
 ---
 - name: Deploy Local Monitoring Stack (Prometheus & Grafana)
   hosts: nodes
-  become: yes
+  remote_user: deployer
+  become: true
   vars:
     monitoring_dir: "/home/deployer/monitoring"
 
   tasks:
     - name: Ensure monitoring directory exists
-      file:
+      ansible.builtin.file:
         path: "{{ monitoring_dir }}"
         state: directory
         owner: deployer
@@ -15,10 +16,11 @@
         mode: '0755'
 
     - name: Copy Prometheus configuration
-      copy:
+      ansible.builtin.copy:
         dest: "{{ monitoring_dir }}/prometheus.yml"
         owner: deployer
         group: deployer
+        mode: '0644'
         content: |
           global:
             scrape_interval: 15s
@@ -27,13 +29,15 @@
             - job_name: 'leios-relay'
               static_configs:
                 - targets: ['host.docker.internal:12798']
+      become: true
       become_user: deployer
 
     - name: Copy Docker Compose configuration for monitoring
-      copy:
+      ansible.builtin.copy:
         dest: "{{ monitoring_dir }}/docker-compose.yml"
         owner: deployer
         group: deployer
+        mode: '0644'
         content: |
           services:
             prometheus:
@@ -66,10 +70,12 @@
           volumes:
             prometheus_data:
             grafana_data:
+      become: true
       become_user: deployer
 
     - name: Deploy Prometheus and Grafana via Docker Compose
       community.docker.docker_compose_v2:
         project_src: "{{ monitoring_dir }}"
         state: present
+      become: true
       become_user: deployer

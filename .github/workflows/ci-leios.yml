@@ -10,7 +10,7 @@ name: Deploy Leios Node via Ansible
       - 'deploy-monitoring.yml'
       - 'requirements.yml'
       - '.github/workflows/deploy-leios.yml'
-  workflow_dispatch: # Allows manual triggering from the GitHub UI
+  workflow_dispatch:  # Allows manual triggering from the GitHub UI
 
 jobs:
   deploy:

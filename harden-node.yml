@@ -49,8 +49,8 @@
         default: "{{ item.policy }}"
         direction: "{{ item.direction }}"
       loop:
-        - { policy: 'deny', direction: 'incoming' }
-        - { policy: 'allow', direction: 'outgoing' }
+        - {policy: 'deny', direction: 'incoming'}
+        - {policy: 'allow', direction: 'outgoing'}
 
     - name: Allow SSH traffic
       community.general.ufw:

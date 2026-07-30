@@ -1,6 +1,6 @@
 name: Deploy Leios Node via Ansible
 
-on:
+"on":
   push:
     branches:
       - main
@@ -35,7 +35,9 @@ jobs:
 
       - name: Execute Ansible Playbooks
         env:
-          ANSIBLE_HOST_KEY_CHECKING: False
+          ANSIBLE_HOST_KEY_CHECKING: false  # Disable host key checking for Ansible
+          VPS_IP: ${{ secrets.VPS_IP }}  # Passes the hidden IP to Ansible
+          VPS_USERNAME: ${{ secrets.VPS_USERNAME }}  # Passes the hidden username to Ansible
           LEIOS_PORT: ${{ secrets.LEIOS_PORT }}  # Passes the hidden port to Ansible
         # Dynamically pass the secrets into the playbook execution
         run: |

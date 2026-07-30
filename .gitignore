@@ -1,5 +1,6 @@
 vars.local.yml
-venv/
+.venv/
 .secrets
 .env
+.ansible
 .DS_Store

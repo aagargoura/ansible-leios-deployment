@@ -1,0 +1,13 @@
+---
+extends: default
+
+ignore: |
+  .venv/
+  .git/
+  .ansible/
+
+rules:
+  # Disable the 80-character limit, as Ansible often requires long lines
+  line-length: disable
+  # Don't require '---' at the top of every single file
+  document-start: disable

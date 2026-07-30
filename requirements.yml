@@ -4,4 +4,3 @@ collections:
     version: "3.10.0"
   - name: ansible.posix
     version: "1.5.4"
-

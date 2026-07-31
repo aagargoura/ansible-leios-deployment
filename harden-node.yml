@@ -3,15 +3,10 @@
   hosts: nodes
   remote_user: root
   become: true
-  # This automatically loads local vars if present, or falls back to empty strings
-  vars_files:
-    - ['vars.local.yml', 'vars.empty.yml']
 
   vars:
-    # It checks if local_ssh_public_key is defined (from vars.local.yml),
-    # otherwise it pulls from the environment variable (for GitHub Actions)
+    # Pulls from group_vars/nodes.yml (or fallback to environment for CI/CD)
     public_ssh_key: "{{ local_ssh_public_key | default(lookup('env', 'SSH_PUBLIC_KEY')) }}"
-    # Checks vars.local.yml first, then GitHub Actions env, and defaults to "3010" if both are empty
     leios_port: "{{ local_leios_port | default(lookup('env', 'LEIOS_PORT')) | default('3010', true) }}"
 
   tasks:
@@ -83,6 +78,26 @@
           port = 22
           mode = aggressive
       notify: Restart Fail2ban
+
+    - name: Add deadsnakes PPA for Python 3.10
+      ansible.builtin.apt_repository:
+        repo: "ppa:deadsnakes/ppa"
+        state: present
+
+    - name: Install Python 3.10 and essential development packages
+      ansible.builtin.apt:
+        name:
+          - python3.10
+          - python3.10-venv
+          - python3.10-dev
+        state: present
+        update_cache: true
+
+    - name: Ensure python3 points to python3.10 if needed
+      community.general.alternatives:
+        name: python3
+        link: /usr/bin/python3
+        path: /usr/bin/python3.10
 
   handlers:
     - name: Restart Fail2ban

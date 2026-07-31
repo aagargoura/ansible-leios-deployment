@@ -27,6 +27,7 @@ ansible-leios-deployment/
 │   └── workflows/
 │       ├── ci-leios.yml          # GitHub Actions CI/CD pipeline deployment
 │       └── ci-test.yml           # GitHub Actions CI/CD pipeline tests
+├── ansible.cfg                   # Global Ansible configuration and defaults
 ├── inventory.ini                 # Target server inventory configuration
 ├── group_vars/
 │   ├── nodes.yml                 # Your actual secrets (Git-ignored)
@@ -54,10 +55,9 @@ git clone git@github.com:aagargoura/ansible-leios-deployment.git
 cd ansible-leios-deployment
 ```
 
-### 2. Configure your inventory:
-Update `inventory.ini` with your target server IP address and connection details.
+### 2. Local Configuration:
 
-To avoid hardcoding long command-line flags (like `--private-key` and `--user`) every time, bake those settings directly into your `inventory.ini` or use an SSH configuration alias (`~/.ssh/config`).
+Update `inventory.ini` with your target server IP address. Connection parameters like your private key and remote user are handled automatically by `ansible.cfg` and `group_vars/nodes.yml`.
 
 ### 3. Local Configuration:
 To test and run playbooks locally without exposing credentials or IP addresses in your public repository:
@@ -77,19 +77,19 @@ Run the modular playbooks sequentially from your local terminal:
 1. **Server Hardening**
 Provisions the secure `deployer` user, configures SSH keys, and sets up sudoers permissions:
 ```bash
-ansible-playbook -i inventory.ini harden-node.yml --private-key ~/.ssh/leios_deploy_key --user root
+ansible-playbook harden-node.yml --user root
 ```
 
 2. **Docker Installation**
 Installs Docker Engine, container plugins, and adds the `deployer` user to the `docker` group:
 ```bash
-ansible-playbook -i inventory.ini install-docker.yml --private-key ~/.ssh/leios_deploy_key --user root
+ansible-playbook install-docker.yml --user root
 ```
 
 3. **Application Deployment**
 Downloads configuration scripts, updates topology files, and spins up the Leios Docker container as the non-root `deployer` user:
 ```bash
-ansible-playbook -i inventory.ini deploy-leios.yml --private-key ~/.ssh/leios_deploy_key --user deployer
+ansible-playbook deploy-leios.yml --user deployer
 ```
 
 ## CI/CD Automation
@@ -129,10 +129,10 @@ You can now run the same checks executed by the '.github/workflows/ci-test.yml' 
 yamllint .
 
 # Verify Ansible syntax
-ansible-playbook -i inventory.ini deploy-leios.yml --syntax-check
-ansible-playbook -i inventory.ini deploy-monitoring.yml --syntax-check
-ansible-playbook -i inventory.ini harden-node.yml --syntax-check
-ansible-playbook -i inventory.ini install-docker.yml --syntax-check
+ansible-playbook deploy-leios.yml --syntax-check
+ansible-playbook deploy-monitoring.yml --syntax-check
+ansible-playbook harden-node.yml --syntax-check
+ansible-playbook install-docker.yml --syntax-check
 
 # Run the Ansible Linter
 ansible-lint deploy-leios.yml deploy-monitoring.yml install-docker.yml harden-node.yml
@@ -184,7 +184,7 @@ You should receive an `HTTP/1.1 200 OK` response
 
 As the container securely exposes Prometheus metrics internally on `127.0.0.1:12798`. You can deploy an automated local monitoring stack (Prometheus and Grafana) using the included observability playbook:
 ```bash
-ansible-playbook -i inventory.ini deploy-monitoring.yml --private-key ~/.ssh/leios_deploy_key --user deployer
+ansible-playbook deploy-monitoring.yml --user deployer
 ```
 
 To view your dashboards locally without exposing ports to the public internet, use secure SSH local port forwarding:

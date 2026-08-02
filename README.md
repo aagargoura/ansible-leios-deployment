@@ -1,6 +1,6 @@
 # Ansible Ouroboros-Leios Node Deployment
 
-![Leios Prototype](https://img.shields.io/badge/Leios%20Prototype-2026w30-blue?style=flat-square&logo=cardano)
+![Leios Prototype](https://img.shields.io/badge/Leios%20Prototype-2026w31-blue?style=flat-square&logo=cardano)
 ![Prometheus](https://img.shields.io/badge/Prometheus-F05032?style=flat-square&logo=prometheus&logoColor=white)
 ![Grafana](https://img.shields.io/badge/Grafana-F46800?style=flat-square&logo=grafana&logoColor=white)
 ![Ansible Version](https://img.shields.io/badge/Ansible-Core%202.21-red?style=flat-square&logo=ansible)
@@ -152,7 +152,7 @@ The pipeline is automated via GitHub Actions (`.github/workflows/ci-leios.yml`).
 
 ## Local Testing & CI Simulation
 
-To ensure your local tests match the GitHub Actions CI pipeline, it is recommended to run the linters inside an isolated **Python 3.10** virtual environment.
+To ensure your local tests match the GitHub Actions CI pipeline, it is recommended to run the linters inside an isolated **Python 3.14** virtual environment.
 
 **1. Create the Virtual Environment**
 The project uses Python 3.14 and Ansible Core 2.21 to match the CI environment.

@@ -4,6 +4,7 @@
   become: true
   vars:
     monitoring_dir: "/home/deployer/monitoring"
+    docker_network: "leios-monitoring"
     grafana_admin_username: "{{ local_grafana_username | default(lookup('env', 'GRAFANA_USERNAME'), true) }}"
     grafana_admin_password: "{{ local_grafana_password | default(lookup('env', 'GRAFANA_PASSWORD'), true) }}"
 
@@ -15,6 +16,11 @@
         owner: deployer
         group: deployer
         mode: '0755'
+
+    - name: Ensure monitoring Docker network exists
+      community.docker.docker_network:
+        name: "{{ docker_network }}"
+        state: present
 
     - name: Copy Prometheus configuration
       ansible.builtin.copy:
@@ -29,7 +35,7 @@
           scrape_configs:
             - job_name: 'leios-relay'
               static_configs:
-                - targets: ['host.docker.internal:12798']
+                - targets: ['leios-relay:12798']
       become: true
       become_user: deployer
 
@@ -45,8 +51,8 @@
               image: prom/prometheus:v3.13.2
               container_name: prometheus
               restart: unless-stopped
-              extra_hosts:
-                - "host.docker.internal:host-gateway"
+              networks:
+                - "{{ docker_network }}"
               ports:
                 - "127.0.0.1:9090:9090"
               volumes:
@@ -62,6 +68,8 @@
               restart: unless-stopped
               ports:
                 - "127.0.0.1:3000:3000"
+              networks:
+                - "{{ docker_network }}"
               volumes:
                 - "grafana_data:/var/lib/grafana"
               environment:
@@ -71,6 +79,9 @@
           volumes:
             prometheus_data:
             grafana_data:
+          networks:
+            "{{ docker_network }}":
+              external: true
       become: true
       become_user: deployer
 

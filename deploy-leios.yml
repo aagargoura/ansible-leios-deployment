@@ -6,6 +6,7 @@
     # Update this variable when a new weekly release drops
     leios_version: "prototype-2026w31"
     working_dir: "/home/deployer/leios-testnet"
+    docker_network: "leios-monitoring"
 
   tasks:
     - name: Ensure working and config directories exist
@@ -68,6 +69,11 @@
         state: started
         enabled: true
 
+    - name: Ensure monitoring Docker network exists
+      community.docker.docker_network:
+        name: "{{ docker_network }}"
+        state: present
+
     - name: Run Leios Docker Container
       community.docker.docker_container:
         name: leios-relay
@@ -78,7 +84,8 @@
         recreate: true
         ports:
           - "3010:3010"
-          - "127.0.0.1:12798:12798"
+        networks:
+          - name: "{{ docker_network }}"
         volumes:
           - "{{ working_dir }}:/data"
           - "{{ working_dir }}/config:/app/config:ro"

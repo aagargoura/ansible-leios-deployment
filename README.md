@@ -38,6 +38,9 @@ ansible-leios-deployment/
 ├── deploy-monitoring.yml         # Local observability stack (Prometheus & Grafana) playbook
 ├── vars.empty.yml                # Fallback empty variables template for CI/CD runs
 ├── .yamllint                     # Custom configuration for YAML linting rules
+├── docs/
+│   ├── images/                   # Screenshots for operational guides
+│   └── security-operations.md    # Guide for SSH logs, Fail2ban metrics, and UFW audits
 └── README.md
 ```
 
@@ -226,6 +229,12 @@ To view your dashboards locally without exposing ports to the public internet, u
 - **Grafana Dashboard:** `ssh -L 3000:127.0.0.1:3000 deployer@YOUR_VPS_IP` (Navigate to `http://localhost:3000`)
 
 - **Prometheus UI:** `ssh -L 9090:127.0.0.1:9090 deployer@YOUR_VPS_IP` (Navigate to `http://localhost:9090`)
+
+## Security & Hardening
+
+This deployment provisions a non-root `deployer` user, disables SSH password authentication, enables `chrony` time sync, and deploys `fail2ban` alongside `ufw` rate-limiting.
+
+For real-time log monitoring, Fail2ban status checks, and troubleshooting commands, refer to the [Security Operations Guide](docs/security-operations.md).
 
 ## Contributing
 

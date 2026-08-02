@@ -42,8 +42,8 @@ ansible-leios-deployment/
 ├── .yamllint                     # Custom configuration for YAML linting rules
 ├── docs/
 │   ├── images/                   # Screenshots for operational guides
-│   └── security-operations.md    # Guide for SSH logs, Fail2ban metrics, and UFW audits
-├── docker-networking.md          # Docker network architecture for Leios and monitoring
+│   ├── security-operations.md    # Guide for SSH logs, Fail2ban metrics, and UFW audits
+│   └── docker-networking.md      # Docker network architecture for Leios and monitoring
 └── README.md
 ```
 
@@ -248,7 +248,7 @@ You should receive an `HTTP/1.1 200 OK` response
 
 As the container securely exposes Prometheus metrics internally on `127.0.0.1:12798`. You can deploy an automated local monitoring stack (Prometheus and Grafana) using the included observability playbook:
 ```bash
-ansible-playbook deploy-monitoring.yml --user deployer
+ansible-playbook deploy-monitoring.yml
 ```
 
 To view your dashboards locally without exposing ports to the public internet, use secure SSH local port forwarding:

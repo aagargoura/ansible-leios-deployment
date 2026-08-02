@@ -45,14 +45,14 @@
       become: true
       become_user: deployer
 
-    # UNCOMMENT THIS TASK ONLY WHEN A CHAIN RESET IS ANNOUNCED:
-    # - name: Wipe database and logs directory for chain reset
-    #   ansible.builtin.file:
-    #     path: "{{ item }}"
-    #     state: absent
-    #   loop:
-    #     - "{{ working_dir }}/db"
-    #     - "{{ working_dir }}/node.log"
+      # UNCOMMENT THIS TASK ONLY WHEN A CHAIN RESET IS ANNOUNCED:
+      # - name: Wipe database and logs directory for chain reset
+      #  ansible.builtin.file:
+      #    path: "{{ item }}"
+      #    state: absent
+      #  loop:
+      #    - "{{ working_dir }}/db"
+      #    - "{{ working_dir }}/node.log"
 
     - name: Ensure python3-pip and dependencies are installed via apt
       ansible.builtin.apt:
@@ -79,9 +79,10 @@
         recreate: true
         ports:
           - "3010:3010"
-          - "127.0.0.1:12798:12798"
         networks:
           - name: "{{ docker_network }}"
+            aliases:
+              - leios-relay
         volumes:
           - "{{ working_dir }}:/data"
           - "{{ working_dir }}/config:/app/config:ro"

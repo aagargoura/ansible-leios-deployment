@@ -34,6 +34,16 @@
       become: true
       become_user: deployer
 
+    - name: Verify Leios container exists before deploying monitoring
+      community.docker.docker_container_info:
+        name: leios-relay
+      register: leios_container
+
+    - name: Fail if Leios container is missing
+      ansible.builtin.fail:
+        msg: "Leios container must exist before deploying monitoring"
+      when: not leios_container.exists
+
     - name: Copy Docker Compose configuration for monitoring
       ansible.builtin.copy:
         dest: "{{ monitoring_dir }}/docker-compose.yml"

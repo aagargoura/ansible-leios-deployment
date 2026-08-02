@@ -80,6 +80,9 @@
           - docker
         append: true
 
+    - name: Reset SSH connection after docker group change
+      ansible.builtin.meta: reset_connection
+
     - name: Download ufw-docker helper script
       ansible.builtin.get_url:
         url: https://github.com/chaifeng/ufw-docker/raw/master/ufw-docker

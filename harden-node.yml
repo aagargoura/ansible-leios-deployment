@@ -83,6 +83,9 @@
         content: |
           [DEFAULT]
           bantime = 86400
+          bantime.increment = true
+          bantime.factor = 2
+          bantime.maxtime = 604800
           findtime = 600
           maxretry = 3
 
@@ -90,6 +93,7 @@
           enabled = true
           port = 22
           mode = aggressive
+      notify: Restart Fail2ban
 
     - name: Ensure Fail2ban is enabled and started
       ansible.builtin.service:

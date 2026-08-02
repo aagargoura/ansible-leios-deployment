@@ -6,4 +6,5 @@ group_vars/nodes.yml
 group_vars/all.yml
 .ansible/
 .cache/
+.vscode/
 .DS_Store

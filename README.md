@@ -3,7 +3,8 @@
 ![Leios Prototype](https://img.shields.io/badge/Leios%20Prototype-2026w30-blue?style=flat-square&logo=cardano)
 ![Prometheus](https://img.shields.io/badge/Prometheus-F05032?style=flat-square&logo=prometheus&logoColor=white)
 ![Grafana](https://img.shields.io/badge/Grafana-F46800?style=flat-square&logo=grafana&logoColor=white)
-![Ansible Version](https://img.shields.io/badge/Ansible-%3E%3D2.15-red?style=flat-square&logo=ansible)
+![Ansible Version](https://img.shields.io/badge/Ansible-Core%202.21-red?style=flat-square&logo=ansible)
+![Python](https://img.shields.io/badge/Python-3.14-blue?style=flat-square&logo=python&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?style=flat-square&logo=docker&logoColor=white)
 
 An open-source, automated, secure Infrastructure-as-Code (IaC) pipeline designed to provision, harden, and deploy an Ouroboros Leios node onto a remote VPS (such as IONOS) using Ansible, Docker and GitHub Actions.
@@ -45,12 +46,20 @@ ansible-leios-deployment/
 ```
 
 ## Prerequisites
-
-* **Local Machine:** Ansible installed (via `pipx` or a Python virtual environment).
+* **Local Machine:** Python 3.14 and Ansible Core 2.21+ installed (recommended via `pipx` or an isolated Python environment).
+* **Required Ansible Collections:**
+  * `community.docker >= 5.2.1`
+  * `ansible.posix >= 2.2.2`
+  * `community.general >= 13.2.0`
 * **SSH Key Pairs:** Two dedicated, separate key pairs:
   * `leios_deploy_key`: the ongoing key used by Ansible/CI to connect as the `deployer` user for all normal operations.
   * `leios_bootstrap_key`: a disposable key used **only once**, to authenticate as `root` during initial hardening. Root SSH access is disabled immediately after the first `harden-node.yml` run, so this key is never needed again unless the VPS is rebuilt from scratch.
 * **Remote VPS:** A clean Ubuntu/Debian server instance from a cloud provider.
+
+Install required collections:
+
+```bash
+ansible-galaxy collection install -r requirements.yml
 
 ## Quick Start / Deployment
 
@@ -117,6 +126,7 @@ ansible-playbook harden-node.yml
 
 2. **Docker Installation**
 Installs Docker Engine, container plugins, and adds the `deployer` user to the `docker` group:
+The Docker installation playbook also installs the Python Docker SDK dependency (`python3-docker`) required by the Ansible `community.docker` modules.
 ```bash
 ansible-playbook install-docker.yml
 ```
@@ -143,10 +153,10 @@ The pipeline is automated via GitHub Actions (`.github/workflows/ci-leios.yml`).
 To ensure your local tests match the GitHub Actions CI pipeline, it is recommended to run the linters inside an isolated **Python 3.10** virtual environment.
 
 **1. Create the Virtual Environment**
-Ensure you have Python 3.10 installed on your system, then create a new virtual environment in the root of the repository:
+The project uses Python 3.14 and Ansible Core 2.21 to match the CI environment.
 
 ```bash
-python3.10 -m venv .venv
+python3.14 -m venv .venv
 ```
 **2. Activate the Environment**
 ```bash
@@ -156,7 +166,9 @@ source .venv/bin/activate
 Install the exact linters and Ansible core used by the CI pipeline:
 ```bash
 pip install --upgrade pip
-pip install ansible ansible-lint yamllint
+pip install ansible-core==2.21.2 ansible-lint yamllint
+
+ansible-galaxy collection install -r requirements.yml
 ```
 
 **4. Run Local Tests**

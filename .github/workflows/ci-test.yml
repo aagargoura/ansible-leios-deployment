@@ -1,6 +1,6 @@
 name: Ansible CI Tests
 
-on:
+"on":
   push:
     branches:
       - main

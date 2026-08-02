@@ -1,11 +1,10 @@
 ---
 - name: Deploy and Update Ouroboros Leios Node
   hosts: nodes
-  remote_user: deployer
   become: true
   vars:
     # Update this variable when a new weekly release drops
-    leios_version: "prototype-2026w30"
+    leios_version: "prototype-2026w31"
     working_dir: "/home/deployer/leios-testnet"
 
   tasks:
@@ -29,11 +28,12 @@
         mode: '0755'
 
     - name: Execute pin-config script to update topology and genesis files
-      ansible.builtin.command: bash pin-config.sh
-      args:
+      ansible.builtin.command:
+        cmd: bash pin-config.sh
         chdir: "{{ working_dir }}"
       become: true
       become_user: deployer
+      register: pin_config_result
       changed_when: true
 
     - name: Patch Prometheus bind address to allow container metrics scraping
@@ -62,17 +62,24 @@
         update_cache: true
       become: true
 
-    - name: Run Leios Docker Container via shell
-      ansible.builtin.shell: |
-        docker rm -f leios-relay || true
-        docker run -d \
-          --name leios-relay \
-          --restart unless-stopped \
-          -p 3010:3010 \
-          -p 12798:12798 \
-          -v "{{ working_dir }}:/data" \
-          -v "{{ working_dir }}/config:/app/config:ro" \
-          "ghcr.io/input-output-hk/ouroboros-leios/cardano-node-testnet:{{ leios_version }}"
+    - name: Ensure Docker service is running
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Run Leios Docker Container
+      community.docker.docker_container:
+        name: leios-relay
+        image: "ghcr.io/input-output-hk/ouroboros-leios/cardano-node-testnet:{{ leios_version }}"
+        pull: true
+        state: started
+        restart_policy: unless-stopped
+        recreate: true
+        ports:
+          - "3010:3010"
+          - "127.0.0.1:12798:12798"
+        volumes:
+          - "{{ working_dir }}:/data"
+          - "{{ working_dir }}/config:/app/config:ro"
       become: true
-      become_user: deployer
-      changed_when: true

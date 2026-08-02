@@ -1,10 +1,12 @@
 name: Ansible CI Tests
 
-"on":
+on:
   push:
-    branches: ["main"]
+    branches:
+      - main
   pull_request:
-    branches: ["main"]
+    branches:
+      - main
 
 jobs:
   lint-and-syntax:
@@ -18,34 +20,60 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.14'
 
-      - name: Install dependencies (Ansible & Linters)
+      - name: Install Ansible dependencies
         run: |
-          sudo apt-get update && sudo apt-get install -y ansible
           python -m pip install --upgrade pip
-          pip install ansible-lint yamllint
+
+          pip install \
+            ansible-core==2.21.2 \
+            ansible-lint \
+            yamllint
+
           ansible-galaxy collection install -r requirements.yml
+
+      - name: Verify Ansible environment
+        run: |
+          ansible --version
+          ansible-galaxy collection list
 
       - name: Run yamllint
         run: |
-          # Creates a basic yamllint config on the fly to ignore some strict rules
-          echo -e "---\nextends: default\nrules:\n  line-length: disable\n  document-start: disable" > .yamllint
           yamllint .
 
       - name: Run ansible-lint
         run: |
-          # Ignores missing roles/collections if they aren't downloaded
-          ansible-lint -q --offline deploy-leios.yml deploy-monitoring.yml install-docker.yml harden-node.yml
+          ansible-lint \
+            deploy-leios.yml \
+            deploy-monitoring.yml \
+            install-docker.yml \
+            harden-node.yml
 
-      - name: Ansible Syntax Check (Harden Node)
-        run: ansible-playbook -i inventory.ini harden-node.yml --syntax-check
+      - name: Syntax check harden-node
+        run: |
+          ansible-playbook \
+            -i inventory.ini \
+            harden-node.yml \
+            --syntax-check
 
-      - name: Ansible Syntax Check (Docker)
-        run: ansible-playbook -i inventory.ini install-docker.yml --syntax-check
+      - name: Syntax check install-docker
+        run: |
+          ansible-playbook \
+            -i inventory.ini \
+            install-docker.yml \
+            --syntax-check
 
-      - name: Ansible Syntax Check (Monitoring)
-        run: ansible-playbook -i inventory.ini deploy-monitoring.yml --syntax-check
+      - name: Syntax check deploy-monitoring
+        run: |
+          ansible-playbook \
+            -i inventory.ini \
+            deploy-monitoring.yml \
+            --syntax-check
 
-      - name: Ansible Syntax Check (Leios Node)
-        run: ansible-playbook -i inventory.ini deploy-leios.yml --syntax-check
+      - name: Syntax check deploy-leios
+        run: |
+          ansible-playbook \
+            -i inventory.ini \
+            deploy-leios.yml \
+            --syntax-check

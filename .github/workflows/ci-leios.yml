@@ -9,7 +9,8 @@ name: Deploy Leios Node via Ansible
       - 'deploy-leios.yml'
       - 'deploy-monitoring.yml'
       - 'requirements.yml'
-      - '.github/workflows/deploy-leios.yml'
+      - 'ansible.cfg'
+      - '.github/workflows/ci-leios.yml'
   workflow_dispatch:  # Allows manual triggering from the GitHub UI
 
 jobs:
@@ -19,34 +20,51 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
 
-      - name: Setup SSH Key for Ansible
+      - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/leios_deploy_key
           chmod 600 ~/.ssh/leios_deploy_key
-          # Prevent SSH from asking for strict host key checking confirmation
-          echo "StrictHostKeyChecking no" > ~/.ssh/config
 
-      - name: Install Ansible and Dependencies
+          cat > ~/.ssh/config <<EOF
+          Host *
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+          EOF
+
+      - name: Install Ansible dependencies
         run: |
-          sudo apt-get update && sudo apt-get install -y ansible
+          python -m pip install --upgrade pip
+          pip install ansible-core==2.21.2
           ansible-galaxy collection install -r requirements.yml
 
-      - name: Execute Ansible Playbooks
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: false  # Disable host key checking for Ansible
-          VPS_IP: ${{ secrets.VPS_IP }}  # Passes the hidden IP to Ansible
-          VPS_USERNAME: ${{ secrets.VPS_USERNAME }}  # Passes the hidden username to Ansible
-          LEIOS_PORT: ${{ secrets.LEIOS_PORT }}  # Passes the hidden port to Ansible
-        # Dynamically pass the secrets into the playbook execution
+      - name: Verify Ansible environment
         run: |
-          # Deploy Node Infrastructure
-          ansible-playbook -i inventory.ini deploy-leios.yml \
+          ansible --version
+          ansible-galaxy collection list
+
+      - name: Deploy Leios Node
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: false
+        run: |
+          ansible-playbook \
+            -i inventory.ini \
+            deploy-leios.yml \
             --private-key ~/.ssh/leios_deploy_key \
             --extra-vars "ansible_host=${{ secrets.VPS_IP }} ansible_user=${{ secrets.VPS_USERNAME }}"
 
-          # 2. Deploy Monitoring Stack (Prometheus & Grafana)
-          ansible-playbook -i inventory.ini deploy-monitoring.yml \
+      - name: Deploy Monitoring Stack
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: false
+        run: |
+          ansible-playbook \
+            -i inventory.ini \
+            deploy-monitoring.yml \
             --private-key ~/.ssh/leios_deploy_key \
             --extra-vars "ansible_host=${{ secrets.VPS_IP }} ansible_user=${{ secrets.VPS_USERNAME }}"

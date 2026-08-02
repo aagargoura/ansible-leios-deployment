@@ -86,15 +86,15 @@
         dest: /usr/local/bin/ufw-docker
         mode: '0755'
 
-    - name: Check if ufw-docker integration exists
+    - name: Check ufw-docker integration status
       ansible.builtin.stat:
         path: /etc/ufw/after.rules.d/ufw-docker
       register: ufw_docker_rules
 
     - name: Apply ufw-docker iptables integration
-      ansible.builtin.command:
-        cmd: /usr/local/bin/ufw-docker install
+      ansible.builtin.command: /usr/local/bin/ufw-docker install
       when: not ufw_docker_rules.stat.exists
+      changed_when: true
 
     - name: Reload UFW to apply Docker integration
       community.general.ufw:

@@ -69,11 +69,6 @@
         state: started
         enabled: true
 
-    - name: Ensure monitoring Docker network exists
-      community.docker.docker_network:
-        name: "{{ docker_network }}"
-        state: present
-
     - name: Run Leios Docker Container
       community.docker.docker_container:
         name: leios-relay
@@ -84,6 +79,7 @@
         recreate: true
         ports:
           - "3010:3010"
+          - "127.0.0.1:12798:12798"
         networks:
           - name: "{{ docker_network }}"
         volumes:

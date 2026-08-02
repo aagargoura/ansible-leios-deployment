@@ -47,6 +47,7 @@ jobs:
           ansible-lint \
             deploy-leios.yml \
             deploy-monitoring.yml \
+            prepare-docker.yml \
             install-docker.yml \
             harden-node.yml
 
@@ -62,6 +63,13 @@ jobs:
           ansible-playbook \
             -i inventory.ini \
             install-docker.yml \
+            --syntax-check
+
+      - name: Syntax check prepare-docker
+        run: |
+          ansible-playbook \
+            -i inventory.ini \
+            prepare-docker.yml \
             --syntax-check
 
       - name: Syntax check deploy-monitoring

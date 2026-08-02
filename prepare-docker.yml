@@ -1,0 +1,19 @@
+---
+- name: Prepare Docker Application Environment
+  hosts: nodes
+  become: true
+
+  vars:
+    docker_network: "leios-monitoring"
+
+  tasks:
+    - name: Ensure Docker service is running
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: true
+
+    - name: Ensure application Docker network exists
+      community.docker.docker_network:
+        name: "{{ docker_network }}"
+        state: present

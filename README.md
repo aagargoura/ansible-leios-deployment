@@ -26,7 +26,7 @@ Tested and verified on the following hardware profile:
 ansible-leios-deployment/
 ├── .github/
 │   └── workflows/
-│       ├── ci-leios.yml          # GitHub Actions CI/CD pipeline deployment
+│       ├── ci-leios.yml          # GitHub Actions deployment pipeline (prepare network, deploy node, deploy monitoring)
 │       └── ci-test.yml           # GitHub Actions CI/CD pipeline tests
 ├── ansible.cfg                   # Global Ansible configuration and defaults
 ├── inventory.ini                 # Target server inventory configuration
@@ -35,6 +35,7 @@ ansible-leios-deployment/
 │   └── nodes.yml.example         # Template committed to git
 ├── harden-node.yml               # OS security hardening & user provisioning playbook
 ├── install-docker.yml            # Docker engine and container runtime installation playbook
+├── prepare-docker.yml            # Docker application network preparation
 ├── deploy-leios.yml              # Application deployment and container orchestration playbook
 ├── deploy-monitoring.yml         # Local observability stack (Prometheus & Grafana) playbook
 ├── vars.empty.yml                # Fallback empty variables template for CI/CD runs
@@ -42,6 +43,7 @@ ansible-leios-deployment/
 ├── docs/
 │   ├── images/                   # Screenshots for operational guides
 │   └── security-operations.md    # Guide for SSH logs, Fail2ban metrics, and UFW audits
+├── docker-networking.md          # Docker network architecture for Leios and monitoring
 └── README.md
 ```
 
@@ -131,7 +133,15 @@ The Docker installation playbook also installs the Python Docker SDK dependency 
 ansible-playbook install-docker.yml
 ```
 
-3. **Application Deployment**
+3. **Prepare Docker Environment**
+
+Creates the application Docker network (leios-monitoring) required by the Leios node and monitoring stack.
+
+```bash
+ansible-playbook prepare-docker.yml
+```
+
+4. **Application Deployment**
 Downloads configuration scripts, updates topology files, and spins up the Leios Docker container as the non-root `deployer` user:
 ```bash
 ansible-playbook deploy-leios.yml
@@ -148,7 +158,9 @@ The pipeline is automated via GitHub Actions (`.github/workflows/ci-leios.yml`).
 * `GRAFANA_USERNAME`
 * `GRAFANA_PASSWORD`
 
-> **Prerequisite:** the automated pipeline only runs `deploy-leios.yml` and `deploy-monitoring.yml`. It assumes Docker is already installed and the `deployer` user already exists with SSH/sudo access. **Steps 1 (`harden-node.yml`) and 2 (`install-docker.yml`) from Quick Start are one-time manual operations and are intentionally excluded from CI** They provision the box itself, which shouldn't be re-run automatically on every push. If you fork this repo and only configure the secrets above without running steps 1–2 by hand first, the pipeline will fail with `docker: command not found`.
+> **Prerequisite:** the automated pipeline runs `prepare-docker.yml`, `deploy-leios.yml`, and `deploy-monitoring.yml`.
+It assumes Docker is already installed and the `deployer` user already exists with SSH/sudo access.
+Steps 1 (`harden-node.yml`) and 2 (`install-docker.yml`) from Quick Start are one-time manual operations and are intentionally excluded from CI.
 
 ## Local Testing & CI Simulation
 
@@ -182,11 +194,12 @@ yamllint .
 # Verify Ansible syntax
 ansible-playbook deploy-leios.yml --syntax-check
 ansible-playbook deploy-monitoring.yml --syntax-check
+ansible-playbook prepare-docker.yml --syntax-check
 ansible-playbook harden-node.yml --syntax-check
 ansible-playbook install-docker.yml --syntax-check
 
 # Run the Ansible Linter
-ansible-lint deploy-leios.yml deploy-monitoring.yml install-docker.yml harden-node.yml
+ansible-lint deploy-leios.yml deploy-monitoring.yml prepare-docker.yml install-docker.yml harden-node.yml
 ```
 
 ## Verifying Node Status

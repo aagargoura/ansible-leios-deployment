@@ -49,6 +49,16 @@ jobs:
           ansible --version
           ansible-galaxy collection list
 
+      - name: Prepare Docker environment
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: false
+        run: |
+          ansible-playbook \
+            -i inventory.ini \
+            prepare-docker.yml \
+            --private-key ~/.ssh/leios_deploy_key \
+            --extra-vars "ansible_host=${{ secrets.VPS_IP }} ansible_user=${{ secrets.VPS_USERNAME }}"
+
       - name: Deploy Leios Node
         env:
           ANSIBLE_HOST_KEY_CHECKING: false

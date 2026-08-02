@@ -17,11 +17,6 @@
         group: deployer
         mode: '0755'
 
-    - name: Ensure monitoring Docker network exists
-      community.docker.docker_network:
-        name: "{{ docker_network }}"
-        state: present
-
     - name: Copy Prometheus configuration
       ansible.builtin.copy:
         dest: "{{ monitoring_dir }}/prometheus.yml"

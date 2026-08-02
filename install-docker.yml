@@ -1,7 +1,6 @@
 ---
 - name: Install and Configure Docker Engine
   hosts: nodes
-  remote_user: root
   become: true
 
   tasks:
@@ -60,3 +59,17 @@
         name: deployer
         groups: docker
         append: true
+
+    - name: Download ufw-docker helper script
+      ansible.builtin.get_url:
+        url: https://github.com/chaifeng/ufw-docker/raw/master/ufw-docker
+        dest: /usr/local/bin/ufw-docker
+        mode: '0755'
+
+    - name: Apply ufw-docker iptables integration
+      ansible.builtin.command: /usr/local/bin/ufw-docker install
+      changed_when: true
+
+    - name: Reload UFW to apply Docker integration
+      community.general.ufw:
+        state: reloaded

@@ -118,13 +118,13 @@ ansible-playbook harden-node.yml
 2. **Docker Installation**
 Installs Docker Engine, container plugins, and adds the `deployer` user to the `docker` group:
 ```bash
-ansible-playbook install-docker.yml --user deployer
+ansible-playbook install-docker.yml
 ```
 
 3. **Application Deployment**
 Downloads configuration scripts, updates topology files, and spins up the Leios Docker container as the non-root `deployer` user:
 ```bash
-ansible-playbook deploy-leios.yml --user deployer
+ansible-playbook deploy-leios.yml
 ```
 
 ## CI/CD Automation

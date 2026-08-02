@@ -145,6 +145,8 @@ The pipeline is automated via GitHub Actions (`.github/workflows/ci-leios.yml`).
 * `VPS_SSH_KEY`
 * `LEIOS_PORT`
 * `SSH_PUBLIC_KEY`
+* `GRAFANA_USERNAME`
+* `GRAFANA_PASSWORD`
 
 > **Prerequisite:** the automated pipeline only runs `deploy-leios.yml` and `deploy-monitoring.yml`. It assumes Docker is already installed and the `deployer` user already exists with SSH/sudo access. **Steps 1 (`harden-node.yml`) and 2 (`install-docker.yml`) from Quick Start are one-time manual operations and are intentionally excluded from CI** They provision the box itself, which shouldn't be re-run automatically on every push. If you fork this repo and only configure the secrets above without running steps 1–2 by hand first, the pipeline will fail with `docker: command not found`.
 

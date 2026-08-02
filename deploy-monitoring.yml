@@ -1,10 +1,11 @@
 ---
 - name: Deploy Local Monitoring Stack (Prometheus & Grafana)
   hosts: nodes
-  remote_user: deployer
   become: true
   vars:
     monitoring_dir: "/home/deployer/monitoring"
+    grafana_admin_username: "{{ local_grafana_username | default(lookup('env', 'GRAFANA_USERNAME'), true) }}"
+    grafana_admin_password: "{{ local_grafana_password | default(lookup('env', 'GRAFANA_PASSWORD'), true) }}"
 
   tasks:
     - name: Ensure monitoring directory exists
@@ -41,7 +42,7 @@
         content: |
           services:
             prometheus:
-              image: prom/prometheus:latest
+              image: prom/prometheus:v3.13.2
               container_name: prometheus
               restart: unless-stopped
               extra_hosts:
@@ -56,7 +57,7 @@
                 - '--storage.tsdb.path=/prometheus'
 
             grafana:
-              image: grafana/grafana:latest
+              image: grafana/grafana:13.1.1
               container_name: grafana
               restart: unless-stopped
               ports:
@@ -64,8 +65,8 @@
               volumes:
                 - "grafana_data:/var/lib/grafana"
               environment:
-                - GF_SECURITY_ADMIN_USER=admin
-                - GF_SECURITY_ADMIN_PASSWORD=securepassword123
+                - GF_SECURITY_ADMIN_USER={{ grafana_admin_username }}
+                - GF_SECURITY_ADMIN_PASSWORD={{ grafana_admin_password }}
 
           volumes:
             prometheus_data:

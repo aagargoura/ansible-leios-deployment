@@ -81,7 +81,7 @@
         mode: '0644'
         content: |
           [DEFAULT]
-          bantime = 3600
+          bantime = 86400
           findtime = 600
           maxretry = 3
 
@@ -152,10 +152,14 @@
     - name: Format swapfile
       ansible.builtin.command: mkswap /swapfile
       when: "'/swapfile' not in swap_status.stdout"
+      register: mkswap_result
+      changed_when: mkswap_result.rc == 0
 
     - name: Enable swapfile
       ansible.builtin.command: swapon /swapfile
       when: "'/swapfile' not in swap_status.stdout"
+      register: swapon_result
+      changed_when: swapon_result.rc == 0
 
     - name: Persist swapfile in fstab
       ansible.builtin.lineinfile:

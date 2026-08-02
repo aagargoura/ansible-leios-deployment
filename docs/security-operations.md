@@ -9,16 +9,19 @@ The node host relies on a multi-layered defense strategy:
 * **UFW Rate-Limiting:** Restricts connection bursts on port `22/tcp` and opens `3010/tcp` for Leios P2P traffic.
 * **Fail2ban (`sshd` jail):** Automatically blocks IPs exhibiting repeated pre-authentication failures.
 
-## Real-Time Log Inspection
+## Real-Time Log Inspection  & Administrative Commands 
+
+1. **Check live SSH authentication events:** 
 
 To inspect live SSH traffic and observe active connection attempts:
 
 ```bash
-sudo journalctl -u ssh -f
+sudo journalctl -u ssh -n 50 --no-pager
 ```
+2. **Fail2ban Jail Status & IP Management:**
 
-## Administrative Commands & Fail2ban Monitoring
 To inspect active jail metrics and see banned IP addresses:
+
 ```bash
 sudo fail2ban-client status sshd
 ```
@@ -36,7 +39,10 @@ sudo fail2ban-client status sshd
 sudo fail2ban-client set sshd unbanip <IP_ADDRESS>
 ```
 
-**Check UFW Firewall Rules:** Verify active packet rules and port bindings:
+3. **Check UFW Firewall Rules:** 
+
+Verify active packet rules and port bindings:
+
 ```bash
 sudo ufw status verbose
 ```
@@ -47,8 +53,3 @@ sudo ufw status verbose
   <br>
   <em>Figure 2: Active UFW Status</em>
 </p>
-
-**Check live SSH authentication events:** 
-```bash
-sudo journalctl -u ssh -n 50 --no-pager
-```

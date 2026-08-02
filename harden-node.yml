@@ -18,6 +18,7 @@
         append: true
         shell: /bin/bash
 
+    # Grant passwordless sudo to deployer user for automated deployments
     - name: Allow 'deployer' user passwordless sudo
       ansible.builtin.lineinfile:
         path: /etc/sudoers.d/deployer
@@ -102,6 +103,7 @@
         path: /etc/ssh/sshd_config
         regexp: '^#?PermitRootLogin'
         line: 'PermitRootLogin no'
+        state: present
       notify: Restart sshd
 
     - name: Disable SSH password authentication (key-only)
@@ -109,7 +111,33 @@
         path: /etc/ssh/sshd_config
         regexp: '^#?PasswordAuthentication'
         line: 'PasswordAuthentication no'
+        state: present
       notify: Restart sshd
+
+    - name: Discover SSH config drop-ins
+      ansible.builtin.find:
+        paths: /etc/ssh/sshd_config.d
+        patterns: '*.conf'
+      register: sshd_dropins
+
+    - name: Neutralize any drop-in re-enabling PasswordAuthentication
+      ansible.builtin.lineinfile:
+        path: "{{ item.path }}"
+        regexp: '^\s*PasswordAuthentication\s+yes'
+        line: 'PasswordAuthentication no'
+        state: present
+      loop: "{{ sshd_dropins.files }}"
+      notify: Restart sshd
+
+    - name: Verify PasswordAuthentication is actually disabled
+      ansible.builtin.command: sshd -T
+      register: sshd_effective_config
+      changed_when: false
+
+    - name: Fail if PasswordAuthentication is still enabled
+      ansible.builtin.fail:
+        msg: "PasswordAuthentication is still enabled after hardening — check for conflicting sshd_config.d drop-ins."
+      when: "'passwordauthentication no' not in sshd_effective_config.stdout | lower"
 
     - name: Enable unattended security upgrades
       ansible.builtin.copy:

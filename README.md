@@ -168,7 +168,7 @@ source .venv/bin/activate
 Install the exact linters and Ansible core used by the CI pipeline:
 ```bash
 pip install --upgrade pip
-pip install ansible-core==2.21.2 ansible-lint yamllint
+pip install ansible-core==2.21.2 ansible-lint==26.6.0 yamllint==1.38
 
 ansible-galaxy collection install -r requirements.yml
 ```
@@ -231,7 +231,7 @@ curl -I http://127.0.0.1:12798/metrics
 
 You should receive an `HTTP/1.1 200 OK` response
 
- --- 
+ ---
 
 As the container securely exposes Prometheus metrics internally on `127.0.0.1:12798`. You can deploy an automated local monitoring stack (Prometheus and Grafana) using the included observability playbook:
 ```bash

@@ -1,15 +1,16 @@
 ---
 - name: Hardening IONOS VPS for Leios Node
   hosts: nodes
-  remote_user: root
   become: true
 
   vars:
     # Pulls from group_vars/nodes.yml (or fallback to environment for CI/CD)
     public_ssh_key: "{{ local_ssh_public_key | default(lookup('env', 'SSH_PUBLIC_KEY')) }}"
     leios_port: "{{ local_leios_port | default(lookup('env', 'LEIOS_PORT')) | default('3010', true) }}"
+    deployer_private_key: "{{ local_deployer_private_key | default('~/.ssh/leios_deploy_key') }}"
 
   tasks:
+    # --- 1. User & Access Management ---
     - name: Create dedicated 'deployer' user with sudo rights
       ansible.builtin.user:
         name: deployer
@@ -31,11 +32,22 @@
         state: present
         key: "{{ public_ssh_key }}"
 
+    # Verify the deployer key works before we lock anything down
+    - name: Verify deployer user can authenticate via SSH key
+      ansible.builtin.command: >
+       ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5
+       -i {{ deployer_private_key }} deployer@{{ ansible_host }} echo ok
+      delegate_to: localhost
+      become: false
+      changed_when: false
+
+    # --- 2. Firewall (UFW) & Fail2ban Security ---
     - name: Install UFW and Fail2ban
       ansible.builtin.apt:
         name:
           - ufw
           - fail2ban
+          - unattended-upgrades
         state: present
         update_cache: true
 
@@ -47,13 +59,13 @@
         - {policy: 'deny', direction: 'incoming'}
         - {policy: 'allow', direction: 'outgoing'}
 
-    - name: Allow SSH traffic
+    - name: Rate-limit SSH traffic (blocks rapid connection attempts)
       community.general.ufw:
-        rule: allow
+        rule: limit
         port: "22"
         proto: tcp
 
-    - name: Allow Leios P2P traffic
+    - name: Allow Leios P2P traffic in UFW
       community.general.ufw:
         rule: allow
         port: "{{ leios_port }}"
@@ -77,29 +89,86 @@
           enabled = true
           port = 22
           mode = aggressive
-      notify: Restart Fail2ban
 
-    - name: Add deadsnakes PPA for Python 3.10
-      ansible.builtin.apt_repository:
-        repo: "ppa:deadsnakes/ppa"
-        state: present
+    - name: Ensure Fail2ban is enabled and started
+      ansible.builtin.service:
+        name: fail2ban
+        state: started
+        enabled: true
 
-    - name: Install Python 3.10 and essential development packages
+    # --- 3. SSH Security Hardening ---
+    - name: Disable root login over SSH
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PermitRootLogin'
+        line: 'PermitRootLogin no'
+      notify: Restart sshd
+
+    - name: Disable SSH password authentication (key-only)
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?PasswordAuthentication'
+        line: 'PasswordAuthentication no'
+      notify: Restart sshd
+
+    - name: Enable unattended security upgrades
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/20auto-upgrades
+        mode: '0644'
+        content: |
+          APT::Periodic::Update-Package-Lists "1";
+          APT::Periodic::Unattended-Upgrade "1";
+
+    # --- 4. System Time Synchronization (Cardano/Leios Consensus) ---
+    - name: Install Chrony NTP service
       ansible.builtin.apt:
-        name:
-          - python3.10
-          - python3.10-venv
-          - python3.10-dev
+        name: chrony
         state: present
-        update_cache: true
 
-    - name: Ensure python3 points to python3.10 if needed
-      community.general.alternatives:
-        name: python3
-        link: /usr/bin/python3
-        path: /usr/bin/python3.10
+    - name: Ensure Chrony is enabled and started
+      ansible.builtin.service:
+        name: chrony
+        state: started
+        enabled: true
+
+    # --- 5. Swap Space (safety margin during initial chain sync) ---
+    - name: Check current swap status
+      ansible.builtin.command: swapon --show=NAME --noheadings
+      register: swap_status
+      changed_when: false
+
+    - name: Create 8G swapfile
+      community.general.filesize:
+        path: /swapfile
+        size: 8G
+      when: "'/swapfile' not in swap_status.stdout"
+
+    - name: Set swapfile permissions
+      ansible.builtin.file:
+        path: /swapfile
+        mode: '0600'
+      when: "'/swapfile' not in swap_status.stdout"
+
+    - name: Format swapfile
+      ansible.builtin.command: mkswap /swapfile
+      when: "'/swapfile' not in swap_status.stdout"
+
+    - name: Enable swapfile
+      ansible.builtin.command: swapon /swapfile
+      when: "'/swapfile' not in swap_status.stdout"
+
+    - name: Persist swapfile in fstab
+      ansible.builtin.lineinfile:
+        path: /etc/fstab
+        line: '/swapfile none swap sw 0 0'
+        state: present
 
   handlers:
+    - name: Restart sshd
+      ansible.builtin.service:
+        name: ssh
+        state: restarted
+
     - name: Restart Fail2ban
       ansible.builtin.service:
         name: fail2ban

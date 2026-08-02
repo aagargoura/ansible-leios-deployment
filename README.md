@@ -44,7 +44,9 @@ ansible-leios-deployment/
 ## Prerequisites
 
 * **Local Machine:** Ansible installed (via `pipx` or a Python virtual environment).
-* **SSH Key Pair:** A dedicated SSH key pair (e.g., `leios_deploy_key`) generated for secure communication.
+* **SSH Key Pairs:** Two dedicated, separate key pairs:
+  * `leios_deploy_key`: the ongoing key used by Ansible/CI to connect as the `deployer` user for all normal operations.
+  * `leios_bootstrap_key`: a disposable key used **only once**, to authenticate as `root` during initial hardening. Root SSH access is disabled immediately after the first `harden-node.yml` run, so this key is never needed again unless the VPS is rebuilt from scratch.
 * **Remote VPS:** A clean Ubuntu/Debian server instance from a cloud provider.
 
 ## Quick Start / Deployment
@@ -55,11 +57,11 @@ git clone git@github.com:aagargoura/ansible-leios-deployment.git
 cd ansible-leios-deployment
 ```
 
-### 2. Local Configuration:
+### 2. Point Ansible at your server:
 
 Update `inventory.ini` with your target server IP address. Connection parameters like your private key and remote user are handled automatically by `ansible.cfg` and `group_vars/nodes.yml`.
 
-### 3. Local Configuration:
+### 3. Set up local secrets:
 To test and run playbooks locally without exposing credentials or IP addresses in your public repository:
 
 1. **Set Up Your Local Variables**:
@@ -71,19 +73,49 @@ Navigate to the `group_vars/` directory and copy the template file to create you
 
 2. **Ensure local secrets are ignored** by verifying that `group_vars/nodes.yml` and your `venv/` are included in your `.gitignore`.
 
-### 4. Run the deployment playbooks:
+### 4. Generate your keys and establish initial SSH trust (new or reprovisioned VPS only)
+
+Generate both key pairs locally, if you haven't already:
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/leios_deploy_key -C "leios deployer key"
+ssh-keygen -t ed25519 -f ~/.ssh/leios_bootstrap_key -C "one-time root bootstrap"
+```
+
+A brand-new IONOS VPS trusts whatever credential the provider gave you at creation, typically an emailed root password, or a key selected in the Cloud Panel; **not** either key above. You must get `leios_bootstrap_key` onto the box once before Ansible can connect as root.
+
+**Preferred:** when creating/rebuilding the VPS in the IONOS Cloud Panel, paste the contents of `~/.ssh/leios_bootstrap_key.pub` into the SSH key field. Root will trust it from first boot.
+
+**If the VPS already exists with only a password:**
+```bash
+ssh-copy-id -i ~/.ssh/leios_bootstrap_key.pub root@YOUR_VPS_IP
+```
+Enter the root password when prompted.
+
+> **Why two keys?** `harden-node.yml` uses `leios_bootstrap_key` only to authenticate as `root` for the first run, then adds `leios_deploy_key` to the new `deployer` user and disables root/password SSH login entirely. Keeping the two separate means a leaked `leios_deploy_key` (e.g. from a CI secret) never grants root access, and the bootstrap key can simply be discarded once hardening completes; it has no further use.
+
+### 5. Run the deployment playbooks:
 Run the modular playbooks sequentially from your local terminal:
 
 1. **Server Hardening**
+
+> ⚠️ **Run this as `root` only on the very first execution.** This playbook disables root SSH login and password authentication as part of hardening the box. Once it has run successfully once, **all future runs must use `--user deployer`** — running with `--user root` again will fail to connect, since root login is now disabled.
+
 Provisions the secure `deployer` user, configures SSH keys, and sets up sudoers permissions:
+ **First run (bootstrap):**
 ```bash
-ansible-playbook harden-node.yml --user root
+ansible-playbook harden-node.yml -e "ansible_user=root ansible_ssh_private_key_file=~/.ssh/leios_bootstrap_key"
 ```
+**Every run after that:**
+```bash
+ ansible-playbook harden-node.yml
+```
+
+> After the bootstrap run completes successfully, `leios_bootstrap_key` is no longer needed; root login is disabled, and all subsequent connections use `deployer` with `leios_deploy_key` (as configured in `inventory.ini`). You can safely delete the bootstrap key pair at this point, or keep it aside only in case you need to rebuild the VPS later.
 
 2. **Docker Installation**
 Installs Docker Engine, container plugins, and adds the `deployer` user to the `docker` group:
 ```bash
-ansible-playbook install-docker.yml --user root
+ansible-playbook install-docker.yml --user deployer
 ```
 
 3. **Application Deployment**
@@ -100,6 +132,8 @@ The pipeline is automated via GitHub Actions (`.github/workflows/ci-leios.yml`).
 * `VPS_SSH_KEY`
 * `LEIOS_PORT`
 * `SSH_PUBLIC_KEY`
+
+> **Prerequisite:** the automated pipeline only runs `deploy-leios.yml` and `deploy-monitoring.yml`. It assumes Docker is already installed and the `deployer` user already exists with SSH/sudo access. **Steps 1 (`harden-node.yml`) and 2 (`install-docker.yml`) from Quick Start are one-time manual operations and are intentionally excluded from CI** They provision the box itself, which shouldn't be re-run automatically on every push. If you fork this repo and only configure the secrets above without running steps 1–2 by hand first, the pipeline will fail with `docker: command not found`.
 
 ## Local Testing & CI Simulation
 

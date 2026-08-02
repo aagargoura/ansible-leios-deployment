@@ -1,0 +1,39 @@
+# files/alertmanager_rules.yml
+groups:
+  - name: cardano_leios_alerts
+    rules:
+      - alert: LeiosNodeDown
+        expr: up{job="leios-relay"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Leios Node is unreachable!"
+          description: "Prometheus has been unable to scrape metrics from leios-relay for over 1 minute."
+
+      - alert: NoHotPeersConnected
+        expr: cardano_node_metrics_peerSelection_Hot_int == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Leios Node has 0 hot peers!"
+          description: "The node has lost all active P2P consensus connections."
+
+      - alert: ChainSyncStalled
+        expr: rate(cardano_node_metrics_blockNum_int[5m]) == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Block height is not advancing"
+          description: "No new blocks processed in the last 5 minutes."
+
+      - alert: HighMemoryUsage
+        expr: (cardano_node_metrics_Mem_resident_int / 1024 / 1024 / 1024) > 14
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Node RAM usage high (> 14 GB)"
+          description: "Resident memory footprint has exceeded 14 GB for 10 minutes."

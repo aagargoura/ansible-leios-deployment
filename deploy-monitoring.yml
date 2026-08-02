@@ -17,6 +17,15 @@
         group: deployer
         mode: '0755'
 
+    - name: Copy Prometheus alert rules
+      ansible.builtin.copy:
+        src: alertmanager_rules.yml
+        dest: "{{ monitoring_dir }}/alertmanager_rules.yml"
+        owner: deployer
+        group: deployer
+        mode: '0644'
+      notify: Reload Prometheus
+
     - name: Copy Prometheus configuration
       ansible.builtin.copy:
         dest: "{{ monitoring_dir }}/prometheus.yml"
@@ -26,6 +35,10 @@
         content: |
           global:
             scrape_interval: 15s
+            evaluation_interval: 15s
+
+          rule_files:
+            - "/etc/prometheus/alertmanager_rules.yml"
 
           scrape_configs:
             - job_name: 'leios-relay'
@@ -33,6 +46,7 @@
                 - targets: ['leios-relay:12798']
       become: true
       become_user: deployer
+      notify: Reload Prometheus
 
     - name: Verify Leios container exists before deploying monitoring
       community.docker.docker_container_info:
@@ -62,6 +76,7 @@
                 - "127.0.0.1:9090:9090"
               volumes:
                 - "./prometheus.yml:/etc/prometheus/prometheus.yml:ro"
+                - "./alertmanager_rules.yml:/etc/prometheus/alertmanager_rules.yml:ro"
                 - "prometheus_data:/prometheus"
               command:
                 - '--config.file=/etc/prometheus/prometheus.yml'
@@ -94,5 +109,14 @@
       community.docker.docker_compose_v2:
         project_src: "{{ monitoring_dir }}"
         state: present
+      become: true
+      become_user: deployer
+
+  handlers:
+    - name: Reload Prometheus
+      community.docker.docker_container:
+        name: prometheus
+        state: restarted
+        restart: true
       become: true
       become_user: deployer

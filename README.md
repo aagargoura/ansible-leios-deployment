@@ -110,7 +110,7 @@ ansible-playbook harden-node.yml -e "ansible_user=root ansible_ssh_private_key_f
 ```
 **Every run after that:**
 ```bash
- ansible-playbook harden-node.yml
+ansible-playbook harden-node.yml
 ```
 
 > After the bootstrap run completes successfully, `leios_bootstrap_key` is no longer needed; root login is disabled, and all subsequent connections use `deployer` with `leios_deploy_key` (as configured in `inventory.ini`). You can safely delete the bootstrap key pair at this point, or keep it aside only in case you need to rebuild the VPS later.

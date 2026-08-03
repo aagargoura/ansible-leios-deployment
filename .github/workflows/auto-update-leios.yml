@@ -14,19 +14,47 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Fetch Latest Leios Release Tag from IOG
+      - name: Fetch Latest Leios Release and Verify GHCR Docker Image
         id: get_release
         run: |
-          # Query array of releases and fetch the tag of the 1st release (even if marked as Pre-release)
-          RAW_TAG=$(curl -s https://api.github.com/repos/input-output-hk/ouroboros-leios/releases | jq -r '.[0].tag_name // empty')
+          # 1. Fetch latest release tag from GitHub Releases API (including pre-releases)
+          GITHUB_TAG=$(curl -s https://api.github.com/repos/input-output-hk/ouroboros-leios/releases | jq -r '.[0].tag_name // empty')
 
-          if [ -z "$RAW_TAG" ] || [ "$RAW_TAG" == "null" ]; then
-            echo "No valid release found. Skipping deployment."
+          if [ -z "$GITHUB_TAG" ] || [ "$GITHUB_TAG" == "null" ]; then
+            echo "No GitHub release found. Skipping deployment."
             echo "has_release=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Found GitHub release tag: $GITHUB_TAG"
+
+          # 2. Get anonymous bearer token for GHCR
+          TOKEN=$(curl -s "https://ghcr.io/token?scope=repository:input-output-hk/ouroboros-leios/cardano-node-testnet:pull" | jq -r .token)
+
+          # 3. Fetch list of published Docker tags from GHCR
+          GHCR_TAGS=$(curl -s -H "Authorization: Bearer $TOKEN" "https://ghcr.io/v2/input-output-hk/ouroboros-leios/cardano-node-testnet/tags/list" | jq -r '.tags[]?')
+
+          # 4. Check if the exact release tag (or sanitized tag) exists on GHCR
+          if echo "$GHCR_TAGS" | grep -q "^${GITHUB_TAG}$"; then
+            TARGET_TAG="$GITHUB_TAG"
           else
-            echo "latest_tag=$RAW_TAG" >> $GITHUB_OUTPUT
+            # Try matching stripped hotfix version (e.g. prototype-2026w31a -> prototype-2026w31)
+            CLEAN_TAG=$(echo "$GITHUB_TAG" | sed -E 's/([0-9]{4}w[0-9]{2})[a-z]+$/\1/')
+            if echo "$GHCR_TAGS" | grep -q "^${CLEAN_TAG}$"; then
+              TARGET_TAG="$CLEAN_TAG"
+            else
+              TARGET_TAG=""
+            fi
+          fi
+
+          # 5. Handle output state
+          if [ -n "$TARGET_TAG" ]; then
+            echo "latest_tag=$TARGET_TAG" >> $GITHUB_OUTPUT
             echo "has_release=true" >> $GITHUB_OUTPUT
-            echo "Target IOG Leios release tag: $RAW_TAG"
+            echo "Matching Docker image found on GHCR: $TARGET_TAG"
+          else
+            echo "⚠️ Release '$GITHUB_TAG' was found on GitHub, but no matching Docker image exists on GHCR yet. Skipping deployment."
+            echo "has_release=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Setup Python

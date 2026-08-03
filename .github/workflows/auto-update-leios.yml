@@ -17,9 +17,10 @@ jobs:
       - name: Fetch Latest Leios Release Tag from IOG
         id: get_release
         run: |
-          RAW_TAG=$(curl -s https://api.github.com/repos/input-output-hk/ouroboros-leios/releases/latest | jq -r .tag_name)
+          # Query array of releases and fetch the tag of the 1st release (even if marked as Pre-release)
+          RAW_TAG=$(curl -s https://api.github.com/repos/input-output-hk/ouroboros-leios/releases | jq -r '.[0].tag_name // empty')
 
-          if [ "$RAW_TAG" == "null" ] || [ -z "$RAW_TAG" ]; then
+          if [ -z "$RAW_TAG" ] || [ "$RAW_TAG" == "null" ]; then
             echo "No valid release found. Skipping deployment."
             echo "has_release=false" >> $GITHUB_OUTPUT
           else

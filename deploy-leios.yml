@@ -76,6 +76,21 @@
         source: pull
         force_source: true
 
+    # 1. Stop old container (releasing socket file handle)
+    - name: Stop existing Leios container if running
+      community.docker.docker_container:
+        name: leios-relay
+        state: stopped
+      ignore_errors: true
+
+    # 2. Pre-flight cleanup of dead socket file
+    - name: Clean up stale node socket before starting container
+      ansible.builtin.file:
+        path: "{{ working_dir }}/node.socket"
+        state: absent
+      become: true
+
+    # 3. Start new node container (creates fresh node.socket on boot)
     - name: Run Leios Docker Container
       community.docker.docker_container:
         name: leios-relay
@@ -106,7 +121,7 @@
       ansible.builtin.wait_for:
         path: "{{ working_dir }}/node.socket"
         state: present
-        timeout: 60
+        timeout: 300
         delay: 3
       become: true
       ignore_errors: true

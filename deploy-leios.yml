@@ -101,9 +101,17 @@
       retries: 6
       delay: 5
 
+    - name: Wait for node.socket file to be created by the node
+      ansible.builtin.wait_for:
+        path: "{{ working_dir }}/node.socket"
+        state: present
+        timeout: 60
+        delay: 3
+      become: true
+
     - name: Verify node is synced and healthy via cardano-cli socket query
       ansible.builtin.command:
-        cmd: docker exec leios-relay cardano-cli query tip --testnet-magic 164 --socket-path /data/node.socket
+        cmd: docker exec leios-relay cardano-cli query tip --testnet-magic 164 --socket-path node.socket
       register: cli_query
       until: cli_query.rc == 0
       retries: 15

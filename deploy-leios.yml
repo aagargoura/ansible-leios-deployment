@@ -93,11 +93,19 @@
           - "{{ working_dir }}/config:/app/config:ro"
       become: true
 
+    - name: Wait for Leios container to reach running state
+      community.docker.docker_container_info:
+        name: leios-relay
+      register: container_info
+      until: container_info.container.State.Running == true
+      retries: 6
+      delay: 5
+
     - name: Verify metrics endpoint is healthy post-deployment
       ansible.builtin.uri:
         url: "http://localhost:12798/metrics"
         status_code: 200
       register: metrics_check
       until: metrics_check.status == 200
-      retries: 6
+      retries: 10
       delay: 5

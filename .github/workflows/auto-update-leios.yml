@@ -19,24 +19,23 @@ jobs:
         run: |
           RAW_TAG=$(curl -s https://api.github.com/repos/input-output-hk/ouroboros-leios/releases/latest | jq -r .tag_name)
 
-          # Fallback check if releases API returns null/empty
           if [ "$RAW_TAG" == "null" ] || [ -z "$RAW_TAG" ]; then
-            FINAL_TAG="prototype-2026w31"
-            echo "No valid release found. Defaulting to fallback tag: $FINAL_TAG"
+            echo "No valid release found. Skipping deployment."
+            echo "has_release=false" >> $GITHUB_OUTPUT
           else
-            FINAL_TAG="$RAW_TAG"
-            echo "Latest IOG Leios release tag fetched: $FINAL_TAG"
+            echo "latest_tag=$RAW_TAG" >> $GITHUB_OUTPUT
+            echo "has_release=true" >> $GITHUB_OUTPUT
+            echo "Target IOG Leios release tag: $RAW_TAG"
           fi
 
-          echo "latest_tag=$FINAL_TAG" >> $GITHUB_OUTPUT
-          echo "Target IOG Leios release tag: $FINAL_TAG"
-
       - name: Setup Python
+        if: steps.get_release.outputs.has_release == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Configure SSH
+        if: steps.get_release.outputs.has_release == 'true'
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/leios_deploy_key
@@ -49,14 +48,14 @@ jobs:
           EOF
 
       - name: Install Ansible dependencies
+        if: steps.get_release.outputs.has_release == 'true'
         run: |
           python -m pip install --upgrade pip
           pip install ansible-core==2.21.2
           ansible-galaxy collection install -r requirements.yml
 
       - name: Run Ansible Update Playbook on VPS
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: false
+        if: steps.get_release.outputs.has_release == 'true'
         run: |
           ansible-playbook \
             -i inventory.ini \

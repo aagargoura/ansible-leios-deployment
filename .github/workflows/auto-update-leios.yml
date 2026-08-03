@@ -1,0 +1,55 @@
+name: Auto-Update Leios Node Prototype
+
+on:
+  schedule:
+    # Runs every Monday at 04:00 AM UTC to check for weekend prototype releases
+    - cron: '0 4 * * 1'
+  workflow_dispatch: # Allows manual trigger anytime from GitHub UI
+
+jobs:
+  check-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch Latest Leios Release Tag from IOG
+        id: get_release
+        run: |
+          RAW_TAG=$(curl -s https://api.github.com/repos/input-output-hk/ouroboros-leios/releases/latest | jq -r .tag_name)
+
+          # Fallback check if releases API returns null/empty
+          if [ "$RAW_TAG" == "null" ] || [ -z "$RAW_TAG" ]; then
+            FINAL_TAG="prototype-2026w31"
+          else
+            FINAL_TAG="$RAW_TAG"
+          fi
+
+          echo "latest_tag=$FINAL_TAG" >> $GITHUB_OUTPUT
+          echo "Target IOG Leios release tag: $FINAL_TAG"
+
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Add VPS to Known Hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p ${{ secrets.VPS_SSH_PORT }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Install Ansible on Runner
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ansible
+
+      - name: Run Ansible Update Playbook on VPS
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "False"
+        run: |
+          ansible-playbook -i "${{ secrets.VPS_HOST }}," \
+            -u ${{ secrets.VPS_USERNAME }} \
+            --port ${{ secrets.VPS_SSH_PORT }} \
+            deploy-leios.yml \
+            --extra-vars "leios_version_tag=${{ steps.get_release.outputs.latest_tag }}"

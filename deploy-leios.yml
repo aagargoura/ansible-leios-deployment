@@ -3,8 +3,8 @@
   hosts: nodes
   become: true
   vars:
-    # Update this variable when a new weekly release drops
-    leios_version: "prototype-2026w31"
+    # Defaults to prototype tag if not passed via --extra-vars from GitHub Actions
+    leios_version: "{{ leios_version_tag | default('prototype-2026w31') }}"
     working_dir: "/home/deployer/leios-testnet"
     docker_network: "leios-monitoring"
 
@@ -47,12 +47,12 @@
 
       # UNCOMMENT THIS TASK ONLY WHEN A CHAIN RESET IS ANNOUNCED:
       # - name: Wipe database and logs directory for chain reset
-      #  ansible.builtin.file:
-      #    path: "{{ item }}"
-      #    state: absent
-      #  loop:
-      #    - "{{ working_dir }}/db"
-      #    - "{{ working_dir }}/node.log"
+      #   ansible.builtin.file:
+      #     path: "{{ item }}"
+      #     state: absent
+      #   loop:
+      #     - "{{ working_dir }}/db"
+      #     - "{{ working_dir }}/node.log"
 
     - name: Ensure python3-pip and dependencies are installed via apt
       ansible.builtin.apt:
@@ -69,11 +69,16 @@
         state: started
         enabled: true
 
+    - name: Pull target Leios Docker image pre-flight
+      community.docker.docker_image:
+        name: "ghcr.io/input-output-hk/ouroboros-leios/cardano-node-testnet:{{ leios_version }}"
+        source: pull
+        force_source: true
+
     - name: Run Leios Docker Container
       community.docker.docker_container:
         name: leios-relay
         image: "ghcr.io/input-output-hk/ouroboros-leios/cardano-node-testnet:{{ leios_version }}"
-        pull: true
         state: started
         restart_policy: unless-stopped
         recreate: true
@@ -87,3 +92,12 @@
           - "{{ working_dir }}:/data"
           - "{{ working_dir }}/config:/app/config:ro"
       become: true
+
+    - name: Verify metrics endpoint is healthy post-deployment
+      ansible.builtin.uri:
+        url: "http://localhost:12798/metrics"
+        status_code: 200
+      register: metrics_check
+      until: metrics_check.status == 200
+      retries: 6
+      delay: 5

@@ -1,6 +1,6 @@
 name: Auto-Update Leios Node Prototype
 
-on:
+"on":
   schedule:
     # Runs every Monday at 04:00 AM UTC to check for weekend prototype releases
     - cron: '0 4 * * 1'

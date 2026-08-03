@@ -109,10 +109,34 @@
         timeout: 60
         delay: 3
       become: true
+      ignore_errors: true
+      register: socket_wait_result
+
+    - name: Fetch container logs on failure or debug mode
+      ansible.builtin.command:
+        cmd: docker logs --tail 50 leios-relay
+      register: leios_docker_logs
+      changed_when: false
+      become: true
+      when: (debug | default(false) | bool) or (socket_wait_result is failed)
+
+    - name: Output debug information and container logs
+      ansible.builtin.debug:
+        msg:
+          - "=== CONTAINER STATUS ==="
+          - "Running: {{ container_info.container.State.Running }}"
+          - "=== RECENT CONTAINER LOGS ==="
+          - "{{ leios_docker_logs.stdout_lines | default([]) }}"
+      when: (debug | default(false) | bool) or (socket_wait_result is failed)
+
+    - name: Fail playbook if socket wait timed out
+      ansible.builtin.fail:
+        msg: "Timeout waiting for {{ working_dir }}/node.socket. See container logs printed above."
+      when: socket_wait_result is failed
 
     - name: Verify node is synced and healthy via cardano-cli socket query
       ansible.builtin.command:
-        cmd: docker exec leios-relay cardano-cli query tip --testnet-magic 164 --socket-path node.socket
+        cmd: docker exec leios-relay cardano-cli query tip --testnet-magic 164 --socket-path /data/node.socket
       register: cli_query
       until: cli_query.rc == 0
       retries: 15

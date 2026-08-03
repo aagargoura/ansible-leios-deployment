@@ -14,7 +14,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Fetch Latest Leios Release and Verify GHCR Docker Image
+      - name: Fetch Latest Leios Release and Verify Exact GHCR Docker Image
         id: get_release
         run: |
           # 1. Fetch latest release tag from GitHub Releases API (including pre-releases)
@@ -34,26 +34,13 @@ jobs:
           # 3. Fetch list of published Docker tags from GHCR
           GHCR_TAGS=$(curl -s -H "Authorization: Bearer $TOKEN" "https://ghcr.io/v2/input-output-hk/ouroboros-leios/cardano-node-testnet/tags/list" | jq -r '.tags[]?')
 
-          # 4. Check if the exact release tag (or sanitized tag) exists on GHCR
+          # 4. Strictly check if the EXACT GitHub release tag exists on GHCR
           if echo "$GHCR_TAGS" | grep -q "^${GITHUB_TAG}$"; then
-            TARGET_TAG="$GITHUB_TAG"
-          else
-            # Try matching stripped hotfix version (e.g. prototype-2026w31a -> prototype-2026w31)
-            CLEAN_TAG=$(echo "$GITHUB_TAG" | sed -E 's/([0-9]{4}w[0-9]{2})[a-z]+$/\1/')
-            if echo "$GHCR_TAGS" | grep -q "^${CLEAN_TAG}$"; then
-              TARGET_TAG="$CLEAN_TAG"
-            else
-              TARGET_TAG=""
-            fi
-          fi
-
-          # 5. Handle output state
-          if [ -n "$TARGET_TAG" ]; then
-            echo "latest_tag=$TARGET_TAG" >> $GITHUB_OUTPUT
+            echo "latest_tag=$GITHUB_TAG" >> $GITHUB_OUTPUT
             echo "has_release=true" >> $GITHUB_OUTPUT
-            echo "Matching Docker image found on GHCR: $TARGET_TAG"
+            echo "Exact matching Docker image found on GHCR: $GITHUB_TAG"
           else
-            echo "⚠️ Release '$GITHUB_TAG' was found on GitHub, but no matching Docker image exists on GHCR yet. Skipping deployment."
+            echo "⚠️ Release '$GITHUB_TAG' was found on GitHub, but exact Docker image '$GITHUB_TAG' is NOT on GHCR yet. Stopping deployment."
             echo "has_release=false" >> $GITHUB_OUTPUT
           fi
 

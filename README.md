@@ -71,6 +71,8 @@ git clone git@github.com:aagargoura/ansible-leios-deployment.git
 cd ansible-leios-deployment
 ```
 
+`README.md` for the quickstart and `[docs/USAGE.md](https://github.com/aagargoura/ansible-leios-deployment/blob/main/docs/USAGE.md)` for the full guide.
+
 ### 2. Point Ansible at your server:
 
 Update `inventory.ini` with your target server IP address. Connection parameters like your private key and remote user are handled automatically by `ansible.cfg` and `group_vars/nodes.yml`.
